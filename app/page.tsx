@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect, Component, ErrorInfo, ReactNode } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import { useAuth } from "./contexts/AuthContext";
+import { saveAnalysisToFirestore } from "./lib/firestore-history";
+import { getAnonCreditsRemaining, consumeAnonCredit, consumeUserCredit, addUserCredits, claimShareCredit } from "./lib/credits";
 
 // Use local API routes (which proxy to backend) for HTTPS compatibility
 const API_URL = "/api";
@@ -1156,16 +1159,16 @@ function NotRelevantCard({ reason, onTryAgain }: { reason?: string; onTryAgain?:
           
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center animate-wiggle">
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-2xl bg-blue-500/[0.08] border border-blue-400/15 flex items-center justify-center">
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">
-              Not a Health Claim
+              Try a Health Claim
             </h2>
             <p className="text-sm sm:text-base text-white/50 max-w-md mx-auto">
-              {reason || "This content doesn't appear to contain health or nutrition claims to analyze."}
+              {reason || "We couldn't find a health or nutrition claim to analyze. Try one of the examples below!"}
             </p>
           </div>
 
@@ -2233,10 +2236,95 @@ function ResultCard({
 }
 
 /* ===========================
+   User Menu Component
+=========================== */
+
+function UserMenu() {
+  const { user, credits, signInWithGoogle, signOut, loading: authLoading, firebaseReady } = useAuth();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  if (!firebaseReady) {
+    return <div className="w-10" />;
+  }
+
+  if (authLoading) {
+    return <div className="w-10 h-10 rounded-xl bg-white/[0.06] animate-gentle-pulse" />;
+  }
+
+  if (!user) {
+    return (
+      <button
+        onClick={signInWithGoogle}
+        className="h-10 px-3 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center gap-2 tap-highlight text-xs sm:text-sm text-white/60 hover:bg-white/10 transition-colors"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Sign in
+      </button>
+    );
+  }
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="h-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center gap-2 px-2 tap-highlight hover:bg-white/10 transition-colors"
+      >
+        {user.photoURL ? (
+          <img src={user.photoURL} alt="" className="w-7 h-7 rounded-lg" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="w-7 h-7 rounded-lg bg-indigo-500/30 flex items-center justify-center text-xs font-bold text-indigo-300">
+            {(user.displayName || user.email || "U")[0].toUpperCase()}
+          </div>
+        )}
+        <span className="text-xs font-medium text-amber-400/80 tabular-nums hidden sm:inline">
+          {credits} ✦
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-12 w-56 glass rounded-xl border border-white/10 p-2 z-50 animate-scale-in origin-top-right">
+          <div className="px-3 py-2 border-b border-white/[0.06] mb-1">
+            <p className="text-sm font-medium text-white truncate">{user.displayName || "User"}</p>
+            <p className="text-xs text-white/40 truncate">{user.email}</p>
+            <p className="text-xs text-amber-400/70 mt-1">{credits} credits remaining</p>
+          </div>
+          <button
+            onClick={() => { signOut(); setOpen(false); }}
+            className="w-full text-left px-3 py-2 text-sm text-white/60 hover:text-white hover:bg-white/[0.06] rounded-lg transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ===========================
    Main Page Component
 =========================== */
 
 function HomeContent() {
+  const { user, credits, refreshCredits, setCredits, signInWithGoogle, firebaseReady } = useAuth();
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -2260,6 +2348,7 @@ function HomeContent() {
     novaGroup?: number;
   } | null>(null);
   const [productNotFound, setProductNotFound] = useState<{ barcode: string; show: boolean } | null>(null);
+  const [showNoCreditModal, setShowNoCreditModal] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -2304,11 +2393,22 @@ function HomeContent() {
           result: result,
         });
         setHistory((prev) => [historyItem, ...prev].slice(0, MAX_HISTORY_ITEMS));
+
+        if (user) {
+          const inputType = isUrlInput ? "url" : currentInputType === "audio" ? "audio" : currentInputType === "image" ? "image" : "text";
+          saveAnalysisToFirestore(
+            user.uid,
+            inputText.slice(0, 500) || "Audio/Image analysis",
+            inputType,
+            result,
+            assessment.overall_grade || "Unknown"
+          ).catch((e) => console.warn("Firestore save failed:", e));
+        }
       }
     } catch (err) {
       console.warn("Error saving to history:", err);
     }
-  }, [result, currentInputType, inputText]);
+  }, [result, currentInputType, inputText, user, isUrlInput]);
 
   const handleHistorySelect = (item: HistoryItem) => {
     setResult(item.result);
@@ -2324,6 +2424,20 @@ function HomeContent() {
   const handleHistoryClear = () => {
     clearHistory();
     setHistory([]);
+  };
+
+  const checkAndConsumeCredit = async (): Promise<boolean> => {
+    if (!firebaseReady) return true; // No limits when Firebase not configured
+    if (user) {
+      const ok = await consumeUserCredit(user.uid);
+      if (!ok) { setShowNoCreditModal(true); return false; }
+      setCredits(credits - 1);
+      return true;
+    }
+    const remaining = getAnonCreditsRemaining();
+    if (remaining <= 0) { setShowNoCreditModal(true); return false; }
+    consumeAnonCredit();
+    return true;
   };
 
   const handleManualProductEntry = async (productInfo: string) => {
@@ -2447,7 +2561,9 @@ function HomeContent() {
       return;
     }
 
-    // Cancel any existing request
+    const hasCredit = await checkAndConsumeCredit();
+    if (!hasCredit) return;
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -2557,6 +2673,10 @@ function HomeContent() {
       setError("No audio recorded. Please try again and speak before stopping.");
       return;
     }
+
+    const hasCredit = await checkAndConsumeCredit();
+    if (!hasCredit) return;
+
     const blob = new Blob(chunks, { type: "audio/webm" });
     const formData = new FormData();
     formData.append("file", blob, "audio.webm");
@@ -2595,6 +2715,9 @@ function HomeContent() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+
+    const hasCredit = await checkAndConsumeCredit();
+    if (!hasCredit) return;
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -2656,21 +2779,64 @@ function HomeContent() {
         onClose={() => setShowScanner(false)}
         onScan={handleBarcodeScan}
       />
+
+      {/* No Credits Modal */}
+      {showNoCreditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 animate-fade-in" onClick={() => setShowNoCreditModal(false)}>
+          <div className="glass-vibrant rounded-2xl p-6 max-w-sm w-full animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center mb-5">
+              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <span className="text-2xl">✦</span>
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-1">Out of Credits</h3>
+              <p className="text-sm text-white/50">
+                {user ? "You've used all your credits." : `You've used your ${3} free analyses for today.`}
+              </p>
+            </div>
+            <div className="space-y-2">
+              {!user && (
+                <button
+                  onClick={async () => { await signInWithGoogle(); setShowNoCreditModal(false); }}
+                  className="w-full py-3 rounded-xl bg-white/90 text-black font-medium text-sm flex items-center justify-center gap-2 tap-highlight"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Sign in for 5 free credits
+                </button>
+              )}
+              {user && (
+                <button
+                  onClick={async () => {
+                    const newCredits = await addUserCredits(user.uid, 1);
+                    setCredits(newCredits);
+                    setShowNoCreditModal(false);
+                  }}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500/80 to-orange-500/80 text-white font-medium text-sm flex items-center justify-center gap-2 tap-highlight"
+                >
+                  <span className="text-lg">▶</span>
+                  Watch an ad for 1 credit
+                </button>
+              )}
+              <button
+                onClick={() => setShowNoCreditModal(false)}
+                className="w-full py-3 rounded-xl bg-white/[0.06] text-white/60 text-sm tap-highlight"
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <main className="min-h-screen min-h-dvh px-4 sm:px-6 py-12 pt-[max(48px,env(safe-area-inset-top))] pb-[max(24px,env(safe-area-inset-bottom))] md:py-24">
         <div className="max-w-2xl mx-auto">
           
-          {/* Header with History Button */}
+          {/* Header */}
           <div className="flex items-center justify-between mb-6 sm:mb-8 animate-fade-in">
-            <div className="w-10" /> {/* Spacer */}
-            <div className="text-center flex-1">
-              <h1 className="text-3xl sm:text-5xl md:text-6xl font-semibold mb-2 sm:mb-3 tracking-tight text-white">
-                Know Your Food
-              </h1>
-              <p className="text-xs sm:text-base text-white/40">
-                Science-backed analysis of health claims
-              </p>
-            </div>
             <button
               onClick={() => setShowHistory(true)}
               className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center tap-highlight relative"
@@ -2685,6 +2851,15 @@ function HomeContent() {
                 </span>
               )}
             </button>
+            <div className="text-center flex-1">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-semibold mb-2 sm:mb-3 tracking-tight animate-header-gradient">
+                Know Your Food
+              </h1>
+              <p className="text-xs sm:text-base text-white/40">
+                Science-backed analysis of health claims
+              </p>
+            </div>
+            <UserMenu />
           </div>
 
           {/* Input Card */}

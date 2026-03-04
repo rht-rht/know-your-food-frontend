@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
+import { Providers } from "./components/Providers";
 
 export const metadata: Metadata = {
   title: "Know Your Food",
@@ -53,7 +54,9 @@ export default function RootLayout({
         )}
       </head>
       <body className="antialiased">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <ServiceWorkerRegistration />
       </body>
     </html>

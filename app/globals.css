@@ -240,10 +240,17 @@ button, .btn-glow, .btn-glass {
 .glass-input:focus {
   outline: none;
   background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(99, 102, 241, 0.4);
   box-shadow: 
-    0 0 0 4px rgba(255, 255, 255, 0.08),
+    0 0 0 4px rgba(99, 102, 241, 0.1),
+    0 0 20px rgba(99, 102, 241, 0.08),
     0 8px 32px rgba(0, 0, 0, 0.2);
+  animation: inputFocusGlow 2s ease-in-out infinite;
+}
+
+@keyframes inputFocusGlow {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), 0 0 20px rgba(99, 102, 241, 0.08), 0 8px 32px rgba(0, 0, 0, 0.2); }
+  50% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15), 0 0 30px rgba(99, 102, 241, 0.12), 0 8px 32px rgba(0, 0, 0, 0.2); }
 }
 
 /* ========================
@@ -1117,14 +1124,14 @@ button, .btn-glow, .btn-glass {
 }
 
 /* Stagger delays for lists */
-.stagger-fast > *:nth-child(1) { animation-delay: 0.03s; }
-.stagger-fast > *:nth-child(2) { animation-delay: 0.06s; }
-.stagger-fast > *:nth-child(3) { animation-delay: 0.09s; }
-.stagger-fast > *:nth-child(4) { animation-delay: 0.12s; }
-.stagger-fast > *:nth-child(5) { animation-delay: 0.15s; }
-.stagger-fast > *:nth-child(6) { animation-delay: 0.18s; }
-.stagger-fast > *:nth-child(7) { animation-delay: 0.21s; }
-.stagger-fast > *:nth-child(8) { animation-delay: 0.24s; }
+.stagger-fast > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-fast > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-fast > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-fast > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-fast > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-fast > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger-fast > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-fast > *:nth-child(8) { animation-delay: 0.4s; }
 
 /* Mobile bottom sheet handle */
 .sheet-handle {
@@ -1204,6 +1211,48 @@ button, .btn-glow, .btn-glass {
   background-clip: text;
   animation: gradientShift 3s ease infinite;
 }
+
+.animate-header-gradient {
+  background: linear-gradient(90deg, #ffffff 0%, #c4b5fd 25%, #93c5fd 50%, #c4b5fd 75%, #ffffff 100%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: headerGradient 6s ease-in-out infinite;
+}
+
+@keyframes headerGradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Section stagger entrance with card-enter style */
+.result-section {
+  opacity: 0;
+  animation: resultSectionEnter 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes resultSectionEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-section:nth-child(1) { animation-delay: 0.05s; }
+.result-section:nth-child(2) { animation-delay: 0.12s; }
+.result-section:nth-child(3) { animation-delay: 0.19s; }
+.result-section:nth-child(4) { animation-delay: 0.26s; }
+.result-section:nth-child(5) { animation-delay: 0.33s; }
+.result-section:nth-child(6) { animation-delay: 0.40s; }
+.result-section:nth-child(7) { animation-delay: 0.47s; }
+.result-section:nth-child(8) { animation-delay: 0.54s; }
+.result-section:nth-child(9) { animation-delay: 0.61s; }
+.result-section:nth-child(10) { animation-delay: 0.68s; }
 
 /* Mobile optimized transitions */
 @media (max-width: 640px) {
