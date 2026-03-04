@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:8000';
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     forwardFormData.append('file', blob, 'audio.webm');
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 110000);
+    const timeout = setTimeout(() => controller.abort(), 280000);
     
     const response = await fetch(`${BACKEND_URL}/analyze/audio`, {
       method: 'POST',

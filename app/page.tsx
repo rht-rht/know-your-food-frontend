@@ -714,7 +714,7 @@ function SocialShareMenu({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/90"
         onClick={onClose}
       />
       
@@ -785,7 +785,7 @@ function FeedbackModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/90"
         onClick={onClose}
       />
       
@@ -882,33 +882,260 @@ function FeedbackModal({
 }
 
 /* ===========================
+   Ad Banner Component
+=========================== */
+
+function AdBanner({ visible }: { visible: boolean }) {
+  const adClient = process.env.NEXT_PUBLIC_ADSENSE_ID;
+  const adSlot = process.env.NEXT_PUBLIC_AD_SLOT_LOADING;
+  const isReal = !!(adClient && adSlot);
+  const adRef = useRef<HTMLModElement>(null);
+  const pushed = useRef(false);
+
+  useEffect(() => {
+    if (isReal && adRef.current && !pushed.current) {
+      try {
+        ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+        pushed.current = true;
+      } catch {}
+    }
+  }, [isReal]);
+
+  if (!visible) return null;
+
+  if (isReal) {
+    return (
+      <div className="animate-fade-in">
+        <p className="text-[10px] font-medium text-white/20 uppercase tracking-widest mb-2 text-center">
+          Sponsored
+        </p>
+        <div className="flex justify-center overflow-hidden rounded-xl">
+          <ins
+            ref={adRef}
+            className="adsbygoogle"
+            style={{ display: "block", width: "100%", maxHeight: "100px" }}
+            data-ad-client={adClient}
+            data-ad-slot={adSlot}
+            data-ad-format="horizontal"
+            data-full-width-responsive="true"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-fade-in">
+      <p className="text-[10px] font-medium text-white/20 uppercase tracking-widest mb-2 text-center">
+        Sponsored
+      </p>
+      <div className="section-glass rounded-xl p-4 flex items-center justify-center" style={{ minHeight: "80px" }}>
+        <div className="text-center">
+          <p className="text-xs text-white/25 mb-1">Ad space available</p>
+          <p className="text-[10px] text-white/15">Set NEXT_PUBLIC_ADSENSE_ID to enable</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===========================
    Loading Component
 =========================== */
 
-function LoadingState({ onCancel }: { onCancel?: () => void }) {
+function LoadingState({ onCancel, isUrl = false }: { onCancel?: () => void; isUrl?: boolean }) {
+  const [elapsed, setElapsed] = useState(0);
+  const [currentFact, setCurrentFact] = useState(0);
+  const [factVisible, setFactVisible] = useState(true);
+  const [showAd, setShowAd] = useState(false);
+
+  const stages = [
+    { icon: "🔍", label: "Understanding your input", threshold: 0 },
+    { icon: "🧬", label: "Extracting claims", threshold: 8 },
+    { icon: "📚", label: "Searching scientific databases", threshold: 18 },
+    { icon: "⚖️", label: "Cross-referencing evidence", threshold: 35 },
+    { icon: "🧪", label: "Analyzing claim accuracy", threshold: 55 },
+    { icon: "📝", label: "Preparing your report", threshold: 75 },
+  ];
+
+  const urlStages = [
+    { icon: "🔍", label: "Extracting health claims", threshold: 0 },
+    { icon: "📚", label: "Searching scientific databases", threshold: 25 },
+    { icon: "⚖️", label: "Analyzing evidence", threshold: 55 },
+    { icon: "📝", label: "Preparing your report", threshold: 85 },
+  ];
+
+  const activeStages = isUrl ? urlStages : stages;
+
+  const facts = [
+    "Your body replaces its entire skeleton roughly every 10 years.",
+    "The human nose can detect over 1 trillion different scents.",
+    "Honey never spoils — archaeologists found 3000-year-old edible honey in Egyptian tombs.",
+    "Bananas are naturally radioactive due to potassium-40, but completely safe.",
+    "Your stomach acid is strong enough to dissolve metal, yet your stomach lining regenerates every few days.",
+    "Almonds are members of the peach family.",
+    "Apples float in water because they're 25% air.",
+    "The average person eats about 35 tons of food in a lifetime.",
+    "Dark chocolate contains more antioxidants per gram than blueberries.",
+    "Carrots were originally purple — the orange variety was bred in the Netherlands.",
+    "Coconut water can be used as an emergency IV fluid substitute.",
+    "A single strand of spaghetti is called a spaghetto.",
+    "Peanuts are not nuts — they're legumes that grow underground.",
+    "Capsaicin in chili peppers triggers the same brain receptors as physical heat.",
+    "Your gut microbiome contains about 2 kg of bacteria — roughly 100 trillion organisms.",
+    "Caffeine takes about 20 minutes to start working and peaks at 45 minutes.",
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFactVisible(false);
+      setTimeout(() => {
+        setCurrentFact(f => (f + 1) % facts.length);
+        setFactVisible(true);
+      }, 400);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (elapsed < 25) return;
+    if (elapsed === 25) {
+      setShowAd(true);
+      return;
+    }
+    const secondsSinceAdsStart = elapsed - 25;
+    const cyclePosition = secondsSinceAdsStart % 30;
+    setShowAd(cyclePosition < 15);
+  }, [elapsed]);
+
+  const currentStageIdx = activeStages.reduce((acc, stage, i) => 
+    elapsed >= stage.threshold ? i : acc, 0
+  );
+  const stage = activeStages[currentStageIdx];
+
+  const progress = Math.min(
+    ((elapsed - stage.threshold) / 
+    ((activeStages[currentStageIdx + 1]?.threshold || (isUrl ? 140 : 90)) - stage.threshold)) * 100,
+    100
+  );
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+  };
+
   return (
     <div className="mt-6 sm:mt-10 animate-fade-in">
-      <div className="glass-vibrant rounded-2xl sm:rounded-3xl p-8 sm:p-10">
-        <div className="flex flex-col items-center gap-6">
-          <div className="loader-ring" />
-          <div className="text-center">
-            <p className="text-base font-medium text-white/80 mb-1">
-              Analyzing
+      <div className="glass-vibrant rounded-2xl sm:rounded-3xl overflow-hidden">
+        <div className="p-6 sm:p-8 md:p-10">
+
+          {/* Animated DNA helix / pulse */}
+          <div className="flex justify-center mb-6">
+            <div className="relative w-20 h-20">
+              <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-white/80 border-r-white/30 animate-[spin_1.2s_cubic-bezier(0.5,0,0.5,1)_infinite]" />
+              <div className="absolute inset-2 rounded-full border-2 border-transparent border-b-blue-400/60 border-l-blue-400/20 animate-[spin_1.8s_cubic-bezier(0.5,0,0.5,1)_infinite_reverse]" />
+              <div className="absolute inset-0 flex items-center justify-center text-2xl animate-[pulse_2s_ease-in-out_infinite]">
+                {stage.icon}
+              </div>
+            </div>
+          </div>
+
+          {/* Current stage */}
+          <div className="text-center mb-6">
+            <p className="text-base sm:text-lg font-semibold text-white mb-1 transition-all duration-300">
+              {stage.label}
             </p>
-            <p className="text-sm text-white/40">
-              Checking scientific evidence...
+            <p className="text-xs sm:text-sm text-white/40">
+              {formatTime(elapsed)} elapsed
             </p>
           </div>
+
+          {/* Stage progress bar */}
+          <div className="mb-6 px-2">
+            <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+              <div 
+                className="h-full rounded-full transition-all duration-1000 ease-out"
+                style={{ 
+                  width: `${((currentStageIdx + progress / 100) / activeStages.length) * 100}%`,
+                  background: "linear-gradient(90deg, rgba(99,102,241,0.8), rgba(59,130,246,0.8), rgba(34,197,94,0.6))"
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Stage checklist */}
+          <div className="grid gap-2.5 mb-8">
+            {activeStages.map((s, i) => {
+              const isDone = i < currentStageIdx;
+              const isActive = i === currentStageIdx;
+              return (
+                <div 
+                  key={i}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-500 ${
+                    isActive 
+                      ? "bg-white/[0.08] border border-white/15" 
+                      : isDone 
+                        ? "bg-white/[0.03] opacity-60" 
+                        : "opacity-30"
+                  }`}
+                >
+                  <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                    {isDone ? (
+                      <svg className="w-5 h-5 text-green-400 animate-scale-in" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : isActive ? (
+                      <div className="w-4 h-4 rounded-full border-2 border-blue-400/80 border-t-transparent animate-[spin_0.8s_linear_infinite]" />
+                    ) : (
+                      <div className="w-3 h-3 rounded-full bg-white/20" />
+                    )}
+                  </div>
+                  <span className={`text-sm ${isActive ? "text-white/90 font-medium" : isDone ? "text-white/50" : "text-white/30"}`}>
+                    {s.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Did you know / Ad section — appears after 10s */}
+          {elapsed >= 10 && (
+            <div className="mb-6" style={{ minHeight: "80px" }}>
+              {showAd ? (
+                <AdBanner visible={showAd} />
+              ) : (
+                <div className="section-glass rounded-xl p-4 animate-fade-in" style={{ minHeight: "80px" }}>
+                  <p className="text-[10px] font-medium text-white/30 uppercase tracking-widest mb-2">
+                    Did you know?
+                  </p>
+                  <p className={`text-sm text-white/60 leading-relaxed transition-all duration-300 ${factVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
+                    {facts[currentFact]}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Cancel button */}
           {onCancel && (
-            <button
-              onClick={onCancel}
-              className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm font-medium tap-highlight flex items-center gap-2 touch-target"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Cancel
-            </button>
+            <div className="flex justify-center">
+              <button
+                onClick={onCancel}
+                className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/50 text-sm font-medium tap-highlight flex items-center gap-2 touch-target hover:bg-white/10 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Cancel
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1484,7 +1711,7 @@ function ResultCard({
         percent: 100,
         meaning: "Strong, consistent scientific evidence"
       };
-    if (item.overall_grade === "SORT-B" || item.overall_grade === "Almost Accurate")
+    if (item.overall_grade === "SORT-B" || item.overall_grade === "Partially Accurate" || item.overall_grade === "Almost Accurate")
       return { 
         letter: "B", 
         class: "grade-b", 
@@ -1497,6 +1724,13 @@ function ResultCard({
         class: "grade-b", 
         percent: 50,
         meaning: "Accuracy depends on specific circumstances"
+      };
+    if (item.overall_grade === "Informational")
+      return { 
+        letter: "i", 
+        class: "grade-b", 
+        percent: 66,
+        meaning: "Nutritional information & guidance"
       };
     if (item.overall_grade === "Unverifiable")
       return { 
@@ -1565,7 +1799,7 @@ function ResultCard({
 
   return (
     <div className="mt-6 sm:mt-10 animate-card-enter">
-      <div className="glass-vibrant rounded-2xl sm:rounded-3xl overflow-hidden press-effect">
+      <div className="glass-vibrant rounded-2xl sm:rounded-3xl overflow-hidden">
         <div className="p-5 sm:p-6 md:p-8 stagger-fast">
           
           {/* Header - Different for barcode scans */}
@@ -1785,9 +2019,9 @@ function ResultCard({
 
           {/* Grade Explanation - Not shown for barcode scans */}
           {!isBarcodeScan && (
-            <div className="section-glass section-purple rounded-xl sm:rounded-2xl p-4 sm:p-5 mb-5 sm:mb-6 animate-fade-in stagger-2 accent-line-purple shimmer">
+            <div className="section-glass section-purple rounded-xl sm:rounded-2xl p-4 sm:p-5 mb-5 sm:mb-6 animate-fade-in stagger-2 accent-line-purple ambient-glow-purple">
               <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0 animate-icon-pulse">
                   <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -1813,7 +2047,7 @@ function ResultCard({
               </p>
               <div className="space-y-3 sm:space-y-4">
                 {item.claim_summaries.map((summary: any, i: number) => (
-                  <div key={i} className="section-glass section-orange rounded-xl sm:rounded-2xl p-4 sm:p-5 accent-line-orange animate-slide-in-left" style={{ animationDelay: `${i * 0.15}s` }}>
+                  <div key={i} className="section-glass section-orange rounded-xl sm:rounded-2xl p-4 sm:p-5 accent-line-orange animate-slide-in-left ambient-glow-orange" style={{ animationDelay: `${i * 0.15}s` }}>
                     <p className="text-sm sm:text-base text-white font-medium mb-2 leading-relaxed">
                       "{summary.claim_text}"
                     </p>
@@ -1870,12 +2104,12 @@ function ResultCard({
           {item.key_points?.length > 0 && (
             <div className="mb-5 sm:mb-6 animate-fade-in stagger-4">
               <p className="text-[10px] sm:text-xs font-medium text-white/40 uppercase tracking-widest mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 animate-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 What You Should Know
               </p>
-              <div className="section-glass section-blue rounded-xl sm:rounded-2xl p-4 sm:p-5 accent-line-blue">
+              <div className="section-glass section-blue rounded-xl sm:rounded-2xl p-4 sm:p-5 accent-line-blue ambient-glow-blue">
                 <div className="space-y-3 sm:space-y-4">
                   {item.key_points.map((point: string, i: number) => (
                     <div key={i} className="flex gap-3 sm:gap-4 animate-slide-in-left" style={{ animationDelay: `${i * 0.1}s` }}>
@@ -1896,12 +2130,12 @@ function ResultCard({
           {!isBarcodeScan && item.bottom_line && (
             <div className="mb-5 sm:mb-6 animate-fade-in stagger-5">
               <p className="text-[10px] sm:text-xs font-medium text-white/40 uppercase tracking-widest mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 animate-float" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
                 Bottom Line
               </p>
-              <div className="section-glass section-purple rounded-xl sm:rounded-2xl p-4 sm:p-5 accent-line-purple animate-border-flow">
+              <div className="section-glass section-purple rounded-xl sm:rounded-2xl p-4 sm:p-5 accent-line-purple animate-border-flow ambient-glow-purple">
                 <p className="text-white text-base sm:text-lg font-medium leading-relaxed">
                   {item.bottom_line}
                 </p>
@@ -1913,12 +2147,12 @@ function ResultCard({
           {item.suggested_action && (
             <div className="mb-5 sm:mb-6 animate-fade-in stagger-6">
               <p className="text-[10px] sm:text-xs font-medium text-white/40 uppercase tracking-widest mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400 animate-float" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 Recommended Action
               </p>
-              <div className="section-glass section-green rounded-xl sm:rounded-2xl p-4 sm:p-5 accent-line-green shimmer">
+              <div className="section-glass section-green rounded-xl sm:rounded-2xl p-4 sm:p-5 accent-line-green ambient-glow-green">
                 <p className="text-sm sm:text-base text-white/90 leading-relaxed">
                   {item.suggested_action}
                 </p>
@@ -1943,7 +2177,7 @@ function ResultCard({
                       href={study.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-start gap-2 text-xs sm:text-sm text-blue-400 hover:text-blue-300 transition-all hover:translate-x-1 animate-slide-in-left touch-target"
+                      className="flex items-start gap-2 text-xs sm:text-sm text-blue-400 ref-link animate-slide-in-left touch-target"
                       style={{ animationDelay: `${i * 0.1}s` }}
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-400/60 mt-1.5 flex-shrink-0" />
@@ -2020,6 +2254,7 @@ function HomeContent() {
   const [showHistory, setShowHistory] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [currentInputType, setCurrentInputType] = useState<"text" | "audio" | "image" | "barcode">("text");
+  const [isUrlInput, setIsUrlInput] = useState(false);
   const [nutriScore, setNutriScore] = useState<string | null>(null);
   const [productDetails, setProductDetails] = useState<{
     name: string;
@@ -2224,6 +2459,9 @@ function HomeContent() {
     }
     abortControllerRef.current = new AbortController();
 
+    const trimmed = inputText.trim();
+    const looksLikeUrl = /^https?:\/\//i.test(trimmed) || /\.(com|net|org|io)\//i.test(trimmed);
+    setIsUrlInput(looksLikeUrl);
     setCurrentInputType("text");
     setResult(null);
     setLoading(true);
@@ -2238,16 +2476,10 @@ function HomeContent() {
       });
 
       const data = await res.json();
-      console.log("API Response:", data);
-      console.log("is_relevant:", data.is_relevant);
-      console.log("has overall_assessment:", !!data.overall_assessment);
       if (!res.ok) throw new Error(data.detail || "Backend error");
 
-      console.log("Setting result now...");
       setResult(data);
-      console.log("Result set successfully");
     } catch (err: any) {
-      console.error("Fetch error:", err);
       if (err.name === "AbortError") {
         return;
       }
@@ -2255,6 +2487,7 @@ function HomeContent() {
     }
 
     setLoading(false);
+    setIsUrlInput(false);
   };
 
   const stopRecording = () => {
@@ -2552,7 +2785,7 @@ function HomeContent() {
           )}
 
           {/* Loading */}
-          {loading && <LoadingState onCancel={cancelAnalysis} />}
+          {loading && <LoadingState onCancel={cancelAnalysis} isUrl={isUrlInput} />}
 
           {/* Not Relevant Result */}
           {result && result.is_relevant === false && (
