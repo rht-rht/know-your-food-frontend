@@ -998,18 +998,14 @@ function LoadingState({ onCancel, isUrl = false }: { onCancel?: () => void; isUr
         setCurrentFact(f => (f + 1) % facts.length);
         setFactVisible(true);
       }, 400);
-    }, 15000);
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    if (elapsed < 25) return;
-    if (elapsed === 25) {
-      setShowAd(true);
-      return;
-    }
-    const secondsSinceAdsStart = elapsed - 25;
-    const cyclePosition = secondsSinceAdsStart % 30;
+    if (elapsed < 10) { setShowAd(false); return; }
+    const sinceStart = elapsed - 10;
+    const cyclePosition = sinceStart % 25; // 15s ad + 10s fact = 25s cycle
     setShowAd(cyclePosition < 15);
   }, [elapsed]);
 
@@ -1105,23 +1101,21 @@ function LoadingState({ onCancel, isUrl = false }: { onCancel?: () => void; isUr
             })}
           </div>
 
-          {/* Did you know / Ad section — appears after 10s */}
-          {elapsed >= 10 && (
-            <div className="mb-6" style={{ minHeight: "80px" }}>
-              {showAd ? (
-                <AdBanner visible={showAd} />
-              ) : (
-                <div className="section-glass rounded-xl p-4 animate-fade-in" style={{ minHeight: "80px" }}>
-                  <p className="text-[10px] font-medium text-white/30 uppercase tracking-widest mb-2">
-                    Did you know?
-                  </p>
-                  <p className={`text-sm text-white/60 leading-relaxed transition-all duration-300 ${factVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
-                    {facts[currentFact]}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Did you know / Ad section */}
+          <div className="mb-6" style={{ minHeight: "80px" }}>
+            {showAd ? (
+              <AdBanner visible={showAd} />
+            ) : (
+              <div className="section-glass rounded-xl p-4 animate-fade-in" style={{ minHeight: "80px" }}>
+                <p className="text-[10px] font-medium text-white/30 uppercase tracking-widest mb-2">
+                  Did you know?
+                </p>
+                <p className={`text-sm text-white/60 leading-relaxed transition-all duration-300 ${factVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
+                  {facts[currentFact]}
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Cancel button */}
           {onCancel && (
