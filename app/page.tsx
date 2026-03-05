@@ -2308,7 +2308,7 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
 
       {open && (
         <>
-          <div className="fixed inset-0 bg-black/70 z-40" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 bg-black/95 z-40" onClick={() => setOpen(false)} />
           <div className="fixed left-4 right-4 top-20 sm:absolute sm:left-0 sm:right-auto sm:top-12 w-auto sm:w-72 rounded-2xl border border-white/20 z-50 animate-scale-in origin-top-left overflow-hidden"
                style={{ background: "#1a1a2e", boxShadow: "0 20px 60px rgba(0,0,0,0.9)" }}>
 
