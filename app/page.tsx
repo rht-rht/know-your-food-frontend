@@ -2474,7 +2474,13 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
                 Cancel
               </button>
               <button
-                onClick={() => { signOut(); setShowSignOutConfirm(false); }}
+                onClick={() => {
+                  signOut();
+                  setShowSignOutConfirm(false);
+                  localStorage.removeItem("kyf-welcomed");
+                  localStorage.removeItem("kyf-user-details");
+                  window.location.reload();
+                }}
                 className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-500/80 hover:bg-red-500 rounded-xl transition-colors"
               >
                 Sign out
@@ -3677,8 +3683,8 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
       <div className="min-h-screen min-h-dvh flex items-center justify-center px-6 py-12">
         <div className="max-w-sm w-full text-center animate-card-enter">
 
-          <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center">
-            <span className="text-4xl">🔬</span>
+          <div className="w-20 h-20 mx-auto mb-6 rounded-3xl overflow-hidden shadow-lg shadow-indigo-500/20">
+            <img src="/icons/icon.svg" alt="Know Your Food" className="w-full h-full" />
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold mb-3 animate-header-gradient">
