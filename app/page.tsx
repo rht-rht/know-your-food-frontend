@@ -2266,12 +2266,28 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
   const [showBuyCredits, setShowBuyCredits] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const isIndian = typeof navigator !== "undefined" && (
+    navigator.language?.startsWith("hi") ||
+    navigator.language?.startsWith("ta") ||
+    navigator.language?.startsWith("te") ||
+    navigator.language?.startsWith("kn") ||
+    navigator.language?.startsWith("ml") ||
+    navigator.language?.startsWith("mr") ||
+    navigator.language?.startsWith("bn") ||
+    navigator.language?.startsWith("gu") ||
+    navigator.language === "en-IN" ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Kolkata" ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Calcutta"
+  );
+  const currency = isIndian ? "₹" : "$";
+
   const creditPacks = [
-    { id: "starter", credits: 20, price: 0.99, label: "Starter", popular: false },
-    { id: "value", credits: 60, price: 1.99, label: "Value Pack", popular: true },
-    { id: "pro", credits: 150, price: 3.99, label: "Pro Pack", popular: false },
-    { id: "mega", credits: 500, price: 9.99, label: "Mega Pack", popular: false },
+    { id: "starter", credits: 20, priceUSD: 0.99, priceINR: 79, label: "Starter", popular: false },
+    { id: "value", credits: 60, priceUSD: 1.99, priceINR: 149, label: "Value Pack", popular: true },
+    { id: "pro", credits: 150, priceUSD: 3.99, priceINR: 329, label: "Pro Pack", popular: false },
+    { id: "mega", credits: 500, priceUSD: 9.99, priceINR: 799, label: "Mega Pack", popular: false },
   ];
+  const getPrice = (pack: typeof creditPacks[0]) => isIndian ? pack.priceINR : pack.priceUSD;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -2334,6 +2350,7 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
         <>
           <div className="fixed inset-0 bg-black/50 z-[998]" onClick={() => setOpen(false)} />
           <div className="fixed left-4 right-4 top-20 max-w-sm mx-auto rounded-2xl border border-white/[0.15] z-[999] overflow-hidden bg-black"
+               onMouseDown={(e) => e.stopPropagation()}
                style={{ boxShadow: "0 20px 60px rgba(0,0,0,1)" }}>
 
             <div className="px-4 pt-5 pb-4 flex items-center gap-3.5 border-b border-white/[0.15]">
@@ -2398,9 +2415,11 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
                   onClick={() => { setShowBuyCredits(true); setOpen(false); }}
                   className="w-full text-left px-3 py-2 text-sm rounded-xl transition-colors flex items-center gap-2.5 bg-indigo-500/[0.15] hover:bg-indigo-500/[0.25] text-indigo-300"
                 >
-                  <span className="text-base">💎</span>
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   <span className="flex-1">Buy credits</span>
-                  <span className="text-xs text-indigo-400/80">from $0.99</span>
+                  <span className="text-xs text-indigo-400/80">from {currency}{isIndian ? "79" : "0.99"}</span>
                 </button>
               </div>
             </div>
@@ -2557,37 +2576,40 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
             </div>
 
             <div className="px-5 py-4 space-y-2.5">
-              {creditPacks.map((pack) => (
-                <button
-                  key={pack.id}
-                  onClick={() => {
-                    alert(`Payment integration coming soon! You selected: ${pack.label} (${pack.credits} credits for $${pack.price})`);
-                  }}
-                  className={`w-full rounded-xl p-3.5 border transition-colors text-left relative ${
-                    pack.popular
-                      ? "border-amber-500/40 bg-amber-500/[0.08] hover:bg-amber-500/[0.15]"
-                      : "border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08]"
-                  }`}
-                >
-                  {pack.popular && (
-                    <span className="absolute -top-2.5 right-3 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-black rounded-full">
-                      Best Value
-                    </span>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-white">{pack.label}</p>
-                      <p className="text-xs text-white/50 mt-0.5">
-                        {pack.credits} credits &middot; ~{Math.floor(pack.credits / CREDIT_COST_TEXT)} text or ~{Math.floor(pack.credits / CREDIT_COST_MEDIA)} media analyses
-                      </p>
+              {creditPacks.map((pack) => {
+                const price = getPrice(pack);
+                return (
+                  <button
+                    key={pack.id}
+                    onClick={() => {
+                      alert(`Payment integration coming soon! You selected: ${pack.label} (${pack.credits} credits for ${currency}${price})`);
+                    }}
+                    className={`w-full rounded-xl p-3.5 border transition-colors text-left relative ${
+                      pack.popular
+                        ? "border-amber-500/40 bg-amber-500/[0.08] hover:bg-amber-500/[0.15]"
+                        : "border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08]"
+                    }`}
+                  >
+                    {pack.popular && (
+                      <span className="absolute -top-2.5 right-3 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-black rounded-full">
+                        Best Value
+                      </span>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-white">{pack.label}</p>
+                        <p className="text-xs text-white/50 mt-0.5">
+                          {pack.credits} credits &middot; ~{Math.floor(pack.credits / CREDIT_COST_TEXT)} text or ~{Math.floor(pack.credits / CREDIT_COST_MEDIA)} media analyses
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-3">
+                        <p className="text-lg font-bold text-white">{currency}{price}</p>
+                        <p className="text-[10px] text-white/40">{currency}{(price / pack.credits).toFixed(isIndian ? 1 : 3)}/cr</p>
+                      </div>
                     </div>
-                    <div className="text-right flex-shrink-0 ml-3">
-                      <p className="text-lg font-bold text-white">${pack.price}</p>
-                      <p className="text-[10px] text-white/40">${(pack.price / pack.credits).toFixed(3)}/cr</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="px-5 py-3 border-t border-white/[0.1]">
@@ -3151,7 +3173,9 @@ function HomeContent() {
                   onClick={() => { setShowNoCreditModal(false); setShowBuyCreditsModal(true); }}
                   className="w-full py-3 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-medium text-sm flex items-center justify-center gap-2 tap-highlight hover:bg-indigo-500/30 transition-colors"
                 >
-                  <span>💎</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   Buy credits
                 </button>
               )}
@@ -3172,7 +3196,21 @@ function HomeContent() {
       )}
 
       {/* Buy Credits Modal (from NoCreditModal) */}
-      {showBuyCreditsModal && (
+      {showBuyCreditsModal && (() => {
+        const isIN = typeof navigator !== "undefined" && (
+          navigator.language === "en-IN" ||
+          navigator.language?.startsWith("hi") ||
+          Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Kolkata" ||
+          Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Calcutta"
+        );
+        const cur = isIN ? "₹" : "$";
+        const packs = [
+          { id: "starter", credits: 20, priceUSD: 0.99, priceINR: 79, label: "Starter", popular: false },
+          { id: "value", credits: 60, priceUSD: 1.99, priceINR: 149, label: "Value Pack", popular: true },
+          { id: "pro", credits: 150, priceUSD: 3.99, priceINR: 329, label: "Pro Pack", popular: false },
+          { id: "mega", credits: 500, priceUSD: 9.99, priceINR: 799, label: "Mega Pack", popular: false },
+        ];
+        return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 animate-fade-in" onClick={() => setShowBuyCreditsModal(false)}>
           <div className="bg-[#111] border border-white/[0.15] rounded-2xl max-w-sm w-full overflow-hidden animate-scale-in" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.9)" }} onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-4 border-b border-white/[0.1] flex items-center justify-between">
@@ -3182,42 +3220,40 @@ function HomeContent() {
               </button>
             </div>
             <div className="px-5 py-4 space-y-2.5">
-              {[
-                { id: "starter", credits: 20, price: 0.99, label: "Starter", popular: false },
-                { id: "value", credits: 60, price: 1.99, label: "Value Pack", popular: true },
-                { id: "pro", credits: 150, price: 3.99, label: "Pro Pack", popular: false },
-                { id: "mega", credits: 500, price: 9.99, label: "Mega Pack", popular: false },
-              ].map((pack) => (
-                <button
-                  key={pack.id}
-                  onClick={() => {
-                    alert(`Payment integration coming soon! You selected: ${pack.label} (${pack.credits} credits for $${pack.price})`);
-                  }}
-                  className={`w-full rounded-xl p-3.5 border transition-colors text-left relative ${
-                    pack.popular
-                      ? "border-amber-500/40 bg-amber-500/[0.08] hover:bg-amber-500/[0.15]"
-                      : "border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08]"
-                  }`}
-                >
-                  {pack.popular && (
-                    <span className="absolute -top-2.5 right-3 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-black rounded-full">
-                      Best Value
-                    </span>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-white">{pack.label}</p>
-                      <p className="text-xs text-white/50 mt-0.5">
-                        {pack.credits} credits &middot; ~{Math.floor(pack.credits / CREDIT_COST_TEXT)} text or ~{Math.floor(pack.credits / CREDIT_COST_MEDIA)} media analyses
-                      </p>
+              {packs.map((pack) => {
+                const price = isIN ? pack.priceINR : pack.priceUSD;
+                return (
+                  <button
+                    key={pack.id}
+                    onClick={() => {
+                      alert(`Payment integration coming soon! You selected: ${pack.label} (${pack.credits} credits for ${cur}${price})`);
+                    }}
+                    className={`w-full rounded-xl p-3.5 border transition-colors text-left relative ${
+                      pack.popular
+                        ? "border-amber-500/40 bg-amber-500/[0.08] hover:bg-amber-500/[0.15]"
+                        : "border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08]"
+                    }`}
+                  >
+                    {pack.popular && (
+                      <span className="absolute -top-2.5 right-3 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-black rounded-full">
+                        Best Value
+                      </span>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-white">{pack.label}</p>
+                        <p className="text-xs text-white/50 mt-0.5">
+                          {pack.credits} credits &middot; ~{Math.floor(pack.credits / CREDIT_COST_TEXT)} text or ~{Math.floor(pack.credits / CREDIT_COST_MEDIA)} media analyses
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-3">
+                        <p className="text-lg font-bold text-white">{cur}{price}</p>
+                        <p className="text-[10px] text-white/40">{cur}{(price / pack.credits).toFixed(isIN ? 1 : 3)}/cr</p>
+                      </div>
                     </div>
-                    <div className="text-right flex-shrink-0 ml-3">
-                      <p className="text-lg font-bold text-white">${pack.price}</p>
-                      <p className="text-[10px] text-white/40">${(pack.price / pack.credits).toFixed(3)}/cr</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
             <div className="px-5 py-3 border-t border-white/[0.1]">
               <p className="text-[11px] text-white/40 text-center">
@@ -3226,7 +3262,8 @@ function HomeContent() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
       
       <main className="min-h-screen min-h-dvh px-4 sm:px-6 py-12 pt-[max(48px,env(safe-area-inset-top))] pb-[max(24px,env(safe-area-inset-bottom))] md:py-24">
         <div className="max-w-2xl mx-auto">
