@@ -2802,6 +2802,9 @@ function HomeContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastSavedResultRef = useRef<string | null>(null);
 
+  const sharedUrlHandled = useRef(false);
+  const [pendingSharedAnalysis, setPendingSharedAnalysis] = useState(false);
+
   // Load history on mount and track component lifecycle
   useEffect(() => {
     console.log("[HomeContent] Component MOUNTED");
@@ -2810,6 +2813,19 @@ function HomeContent() {
     return () => {
       console.log("[HomeContent] Component UNMOUNTED");
     };
+  }, []);
+
+  // Handle shared URL from PWA Share Target
+  useEffect(() => {
+    if (sharedUrlHandled.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const sharedUrl = params.get("shared_url");
+    if (sharedUrl) {
+      sharedUrlHandled.current = true;
+      window.history.replaceState({}, "", "/");
+      setInputText(sharedUrl);
+      setPendingSharedAnalysis(true);
+    }
   }, []);
 
   // Debug: Track result state changes
@@ -3056,6 +3072,14 @@ function HomeContent() {
     setLoading(false);
     setIsUrlInput(false);
   };
+
+  // Auto-trigger analysis for shared URLs from PWA Share Target
+  useEffect(() => {
+    if (pendingSharedAnalysis && inputText.trim()) {
+      setPendingSharedAnalysis(false);
+      handleAnalyze();
+    }
+  }, [pendingSharedAnalysis, inputText]);
 
   const stopRecording = () => {
     if (silenceCheckRef.current) {
