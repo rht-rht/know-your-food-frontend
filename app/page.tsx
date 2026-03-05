@@ -1718,55 +1718,63 @@ function ResultCard({
         letter: "—", 
         class: "grade-na", 
         percent: 0,
-        meaning: "No health claim detected"
+        meaning: "No health claim detected",
+        sortDesc: null
       };
     if (item.overall_grade === "SORT-A" || item.overall_grade === "Accurate")
       return { 
         letter: "A", 
         class: "grade-a", 
         percent: 100,
-        meaning: "Strong, consistent scientific evidence"
+        meaning: "Strong Evidence",
+        sortDesc: "Based on consistent, good-quality, patient-oriented evidence (e.g., meta-analyses of randomized controlled trials)."
       };
     if (item.overall_grade === "SORT-B" || item.overall_grade === "Partially Accurate" || item.overall_grade === "Almost Accurate")
       return { 
         letter: "B", 
         class: "grade-b", 
         percent: 66,
-        meaning: "Moderate or limited evidence available"
+        meaning: "Moderate Evidence",
+        sortDesc: "Based on inconsistent or limited-quality patient-oriented evidence (e.g., inconsistent RCTs or small cohort studies)."
       };
     if (item.overall_grade === "Context Dependent")
       return { 
         letter: "B", 
         class: "grade-b", 
         percent: 50,
-        meaning: "Accuracy depends on specific circumstances"
+        meaning: "Context Dependent",
+        sortDesc: null
       };
     if (item.overall_grade === "Informational")
       return { 
         letter: "i", 
         class: "grade-b", 
         percent: 66,
-        meaning: "Nutritional information & guidance"
+        meaning: "Nutritional information & guidance",
+        sortDesc: null
       };
     if (item.overall_grade === "Unverifiable")
       return { 
         letter: "?", 
         class: "grade-unknown", 
         percent: 33,
-        meaning: "Cannot be verified with available evidence"
+        meaning: "Cannot be verified with available evidence",
+        sortDesc: null
       };
     if (item.overall_grade === "SORT-C" || item.overall_grade === "Misleading")
       return { 
         letter: "C", 
         class: "grade-c", 
         percent: 20,
-        meaning: "Weak evidence or claim is misleading"
+        meaning: "Weak Evidence",
+        sortDesc: "Based on consensus, usual practice, opinion, or insufficient patient-oriented evidence."
       };
     return { 
       letter: "C", 
       class: "grade-c", 
       percent: 20,
-      meaning: "Insufficient or conflicting evidence"
+      meaning: "Insufficient evidence",
+      sortDesc: null
     };
   };
 
@@ -2046,6 +2054,11 @@ function ResultCard({
                   {item.overall_grade}
                 </p>
               </div>
+              {gradeInfo.sortDesc && (
+                <p className="text-xs text-purple-300/60 mb-3 leading-relaxed border-b border-purple-500/10 pb-3">
+                  {gradeInfo.sortDesc}
+                </p>
+              )}
               <p className="text-sm sm:text-base text-white/70 leading-relaxed">
                 {item.grade_explanation}
               </p>
