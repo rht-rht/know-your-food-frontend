@@ -3,7 +3,7 @@ import { getDbInstance } from "./firebase";
 
 const ANON_CREDITS_KEY = "kyf-anon-credits";
 const ANON_DATE_KEY = "kyf-anon-date";
-const ANON_DAILY_LIMIT = 3;
+export const ANON_DAILY_LIMIT = 3;
 
 export const CREDIT_COST_TEXT = 1;
 export const CREDIT_COST_MEDIA = 2;

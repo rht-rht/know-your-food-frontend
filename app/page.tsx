@@ -9,7 +9,7 @@ import {
   getAnonCreditsRemaining, consumeAnonCredit, consumeUserCredits, addUserCredits, getUserCredits,
   claimShareCredit, claimRewardedAdCredit, canShareForCredit, getSharesToday,
   CREDIT_COST_TEXT, CREDIT_COST_MEDIA, REWARDED_AD_CREDITS,
-  SHARE_REWARD, SHARE_DAILY_MAX, SIGNUP_BONUS,
+  SHARE_REWARD, SHARE_DAILY_MAX, SIGNUP_BONUS, ANON_DAILY_LIMIT,
 } from "./lib/credits";
 
 // Use local API routes (which proxy to backend) for HTTPS compatibility
@@ -2301,20 +2301,135 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
     return <div className="w-10 h-10 rounded-xl bg-white/[0.06] animate-gentle-pulse" />;
   }
 
+  const guestName = typeof window !== "undefined" ? localStorage.getItem("kyf-user-name") || "Guest" : "Guest";
+  const anonRemaining = getAnonCreditsRemaining();
+
   if (!user) {
     return (
-      <button
-        onClick={signInWithGoogle}
-        className="h-10 px-3 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center gap-2 tap-highlight text-xs sm:text-sm text-white/60 hover:bg-white/10 transition-colors"
-      >
-        <svg className="w-4 h-4" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        Sign in
-      </button>
+      <div ref={menuRef} className="relative">
+        <button
+          onClick={() => setOpen(!open)}
+          className="h-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center gap-2 px-2 tap-highlight hover:bg-white/10 transition-colors"
+        >
+          <div className="w-7 h-7 rounded-lg bg-white/[0.12] flex items-center justify-center">
+            <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <span className="text-xs font-medium text-white/50 hidden sm:inline">{guestName}</span>
+        </button>
+
+        {open && typeof document !== "undefined" && createPortal(
+          <>
+            <div className="fixed inset-0 bg-black/50 z-[998]" onClick={() => setOpen(false)} />
+            <div className="fixed left-4 right-4 top-20 max-w-sm mx-auto rounded-2xl border border-white/[0.15] z-[999] overflow-hidden bg-black"
+                 onMouseDown={(e) => e.stopPropagation()}
+                 style={{ boxShadow: "0 20px 60px rgba(0,0,0,1)" }}>
+
+              <div className="px-4 pt-5 pb-4 flex items-center gap-3.5 border-b border-white/[0.15]">
+                <div className="w-14 h-14 rounded-2xl bg-white/[0.08] ring-2 ring-white/[0.15] flex items-center justify-center flex-shrink-0">
+                  <svg className="w-7 h-7 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-white truncate">{guestName}</p>
+                  <p className="text-xs text-white/50">Guest account</p>
+                </div>
+              </div>
+
+              <div className="px-4 py-3 border-b border-white/[0.15]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-white/70 uppercase tracking-wider">Daily Analyses</span>
+                  <span className="text-lg font-bold text-amber-400 tabular-nums">{anonRemaining}/{ANON_DAILY_LIMIT}</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-white/[0.15] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
+                    style={{ width: `${(anonRemaining / ANON_DAILY_LIMIT) * 100}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-white/50 mt-1.5">Sign in with Google for {SIGNUP_BONUS} free credits + more features</p>
+              </div>
+
+              <div className="p-2 space-y-0.5">
+                {firebaseReady && (
+                  <button
+                    onClick={() => { signInWithGoogle(); setOpen(false); }}
+                    className="w-full text-left px-3 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/[0.08] rounded-xl transition-colors flex items-center gap-2.5"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Sign in with Google
+                  </button>
+                )}
+                <button
+                  onClick={() => { setShowAbout(true); setOpen(false); }}
+                  className="w-full text-left px-3 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/[0.08] rounded-xl transition-colors flex items-center gap-2.5"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  About this app
+                </button>
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    localStorage.removeItem("kyf-welcomed");
+                    localStorage.removeItem("kyf-user-details");
+                    window.location.reload();
+                  }}
+                  className="w-full text-left px-3 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/[0.12] rounded-xl transition-colors flex items-center gap-2.5 font-medium"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign out
+                </button>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
+
+        {showAbout && typeof document !== "undefined" && createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70" onClick={() => setShowAbout(false)} />
+            <div className="relative bg-[#111] border border-white/[0.15] rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.9)" }}>
+              <div className="sticky top-0 bg-[#111] border-b border-white/[0.1] px-5 py-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white">Know Your Food</h3>
+                <button onClick={() => setShowAbout(false)} className="w-8 h-8 rounded-lg bg-white/[0.08] flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="px-5 py-4 space-y-5">
+                <div>
+                  <h4 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-2">Why this app exists</h4>
+                  <p className="text-sm text-white/70 leading-relaxed">
+                    Every day we see health claims on social media, food labels, and news articles. Many are misleading or lack context.
+                    Know Your Food uses AI and scientific research to give you evidence-based answers so you can make informed decisions about your health and nutrition.
+                  </p>
+                </div>
+                <div className="border-t border-white/[0.1] pt-4">
+                  <h4 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider mb-3">How to use</h4>
+                  <div className="space-y-3">
+                    <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0 text-sm">💬</div><div><p className="text-sm font-medium text-white/90">Type a claim</p><p className="text-xs text-white/50">E.g. &quot;Eating bananas at night causes weight gain&quot;</p></div></div>
+                    <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-pink-500/20 flex items-center justify-center flex-shrink-0 text-sm">🔗</div><div><p className="text-sm font-medium text-white/90">Paste a reel or shorts URL</p><p className="text-xs text-white/50">Instagram reels, YouTube shorts with health claims</p></div></div>
+                    <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0 text-sm">🎤</div><div><p className="text-sm font-medium text-white/90">Record your voice</p><p className="text-xs text-white/50">Speak the claim and it auto-stops after 3s of silence</p></div></div>
+                    <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0 text-sm">📷</div><div><p className="text-sm font-medium text-white/90">Upload images</p><p className="text-xs text-white/50">Food labels, product claims — up to 5 images at once</p></div></div>
+                    <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0 text-sm">📦</div><div><p className="text-sm font-medium text-white/90">Scan a barcode</p><p className="text-xs text-white/50">Scan any food product barcode for nutritional analysis (free)</p></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+      </div>
     );
   }
 
