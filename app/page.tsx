@@ -2266,18 +2266,12 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
   const [showBuyCredits, setShowBuyCredits] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const isIndian = typeof navigator !== "undefined" && (
-    navigator.language?.startsWith("hi") ||
-    navigator.language?.startsWith("ta") ||
-    navigator.language?.startsWith("te") ||
-    navigator.language?.startsWith("kn") ||
-    navigator.language?.startsWith("ml") ||
-    navigator.language?.startsWith("mr") ||
-    navigator.language?.startsWith("bn") ||
-    navigator.language?.startsWith("gu") ||
-    navigator.language === "en-IN" ||
-    Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Kolkata" ||
-    Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Calcutta"
+  const isIndian = typeof window !== "undefined" && (
+    localStorage.getItem("kyf-user-country") === "IN" ||
+    (!localStorage.getItem("kyf-user-country") && (
+      Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Kolkata" ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Calcutta"
+    ))
   );
   const currency = isIndian ? "₹" : "$";
 
@@ -2382,7 +2376,7 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
                 />
               </div>
               <div className="flex items-center justify-between mt-1.5">
-                <p className="text-[11px] text-white/50">Text: {CREDIT_COST_TEXT} cr &middot; Media: {CREDIT_COST_MEDIA} cr</p>
+                <p className="text-[11px] text-white/50">Text: {CREDIT_COST_TEXT} cr &middot; Media: {CREDIT_COST_MEDIA} cr &middot; Barcode: Free</p>
               </div>
             </div>
 
@@ -2543,13 +2537,20 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
                       <p className="text-xs text-white/50">Food labels, product claims — up to 5 images at once</p>
                     </div>
                   </div>
+                  <div className="flex gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0 text-sm">📦</div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">Scan a barcode</p>
+                      <p className="text-xs text-white/50">Scan any food product barcode for nutritional analysis (free)</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div className="border-t border-white/[0.1] pt-4">
                 <h4 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-2">Credits</h4>
                 <p className="text-sm text-white/70 leading-relaxed mb-2">
-                  Each analysis uses credits. Text costs {CREDIT_COST_TEXT} credit, and media (URLs, images, audio) costs {CREDIT_COST_MEDIA} credits. You can earn credits by:
+                  Each analysis uses credits. Text costs {CREDIT_COST_TEXT} credit, media (URLs, images, audio) costs {CREDIT_COST_MEDIA} credits, and barcode scans are free. You can earn credits by:
                 </p>
                 <ul className="text-sm text-white/60 space-y-1 ml-1">
                   <li className="flex items-center gap-2"><span className="text-amber-400">▶</span> Watching a short ad (+{REWARDED_AD_CREDITS} cr)</li>
@@ -3197,11 +3198,12 @@ function HomeContent() {
 
       {/* Buy Credits Modal (from NoCreditModal) */}
       {showBuyCreditsModal && (() => {
-        const isIN = typeof navigator !== "undefined" && (
-          navigator.language === "en-IN" ||
-          navigator.language?.startsWith("hi") ||
-          Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Kolkata" ||
-          Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Calcutta"
+        const isIN = typeof window !== "undefined" && (
+          localStorage.getItem("kyf-user-country") === "IN" ||
+          (!localStorage.getItem("kyf-user-country") && (
+            Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Kolkata" ||
+            Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Calcutta"
+          ))
         );
         const cur = isIN ? "₹" : "$";
         const packs = [
@@ -3491,6 +3493,165 @@ function HomeContent() {
 }
 
 /* ===========================
+   User Details Form
+=========================== */
+
+const USER_DETAILS_KEY = "kyf-user-details";
+
+const COUNTRIES = [
+  { code: "IN", name: "India" },
+  { code: "US", name: "United States" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "CA", name: "Canada" },
+  { code: "AU", name: "Australia" },
+  { code: "DE", name: "Germany" },
+  { code: "FR", name: "France" },
+  { code: "JP", name: "Japan" },
+  { code: "BR", name: "Brazil" },
+  { code: "AE", name: "UAE" },
+  { code: "SG", name: "Singapore" },
+  { code: "MY", name: "Malaysia" },
+  { code: "PH", name: "Philippines" },
+  { code: "ID", name: "Indonesia" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "NZ", name: "New Zealand" },
+  { code: "ZA", name: "South Africa" },
+  { code: "NG", name: "Nigeria" },
+  { code: "KE", name: "Kenya" },
+  { code: "PK", name: "Pakistan" },
+  { code: "BD", name: "Bangladesh" },
+  { code: "LK", name: "Sri Lanka" },
+  { code: "NP", name: "Nepal" },
+  { code: "KR", name: "South Korea" },
+  { code: "IT", name: "Italy" },
+  { code: "ES", name: "Spain" },
+  { code: "MX", name: "Mexico" },
+  { code: "OTHER", name: "Other" },
+];
+
+function guessCountryFromTimezone(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz === "Asia/Kolkata" || tz === "Asia/Calcutta") return "IN";
+    if (tz.startsWith("America/New_York") || tz.startsWith("America/Chicago") || tz.startsWith("America/Denver") || tz.startsWith("America/Los_Angeles")) return "US";
+    if (tz === "Europe/London") return "GB";
+    if (tz.startsWith("Australia/")) return "AU";
+    if (tz.startsWith("Asia/Tokyo")) return "JP";
+    if (tz.startsWith("Asia/Singapore")) return "SG";
+    if (tz.startsWith("Asia/Dubai")) return "AE";
+  } catch {}
+  return "";
+}
+
+function UserDetailsForm({ onComplete }: { onComplete: () => void }) {
+  const { user, updateUserProfile } = useAuth();
+  const [name, setName] = useState(user?.displayName || "");
+  const [age, setAge] = useState("");
+  const [country, setCountry] = useState(guessCountryFromTimezone());
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !age || !country) return;
+    setSubmitting(true);
+
+    const ageNum = parseInt(age, 10);
+    localStorage.setItem("kyf-user-name", name.trim());
+    localStorage.setItem("kyf-user-age", String(ageNum));
+    localStorage.setItem("kyf-user-country", country);
+    localStorage.setItem(USER_DETAILS_KEY, "1");
+
+    if (user) {
+      try {
+        await updateUserProfile(user.uid, {
+          displayName: name.trim(),
+          age: ageNum,
+          country,
+        });
+      } catch (e) {
+        console.error("Error saving profile:", e);
+      }
+    }
+
+    setSubmitting(false);
+    onComplete();
+  };
+
+  const isValid = name.trim().length > 0 && age && parseInt(age, 10) > 0 && parseInt(age, 10) < 120 && country;
+
+  return (
+    <>
+      <AnimatedBackground />
+      <div className="min-h-screen min-h-dvh flex items-center justify-center px-6 py-12">
+        <div className="max-w-sm w-full animate-card-enter">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-1">Tell us about you</h2>
+            <p className="text-sm text-white/40">This helps us personalize your experience</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-white/60 mb-1.5 ml-1">Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className="glass-input text-sm"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-white/60 mb-1.5 ml-1">Age</label>
+              <input
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="Your age"
+                min="1"
+                max="119"
+                className="glass-input text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-white/60 mb-1.5 ml-1">Country</label>
+              <select
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="glass-input text-sm appearance-none"
+              >
+                <option value="" disabled>Select your country</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={!isValid || submitting}
+            className="w-full mt-6 py-3.5 rounded-xl bg-white/90 text-black font-medium text-sm tap-highlight hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {submitting ? "Saving..." : "Get Started"}
+          </button>
+
+          <p className="text-[11px] text-white/25 mt-4 text-center">
+            Your info is stored securely and never shared
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ===========================
    Welcome Screen
 =========================== */
 
@@ -3564,11 +3725,14 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
 
 export default function Home() {
   const [welcomed, setWelcomed] = useState<boolean | null>(null);
+  const [detailsCollected, setDetailsCollected] = useState<boolean | null>(null);
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     const stored = localStorage.getItem(WELCOME_KEY);
+    const details = localStorage.getItem(USER_DETAILS_KEY);
     setWelcomed(!!stored);
+    setDetailsCollected(!!details);
   }, []);
 
   useEffect(() => {
@@ -3578,12 +3742,20 @@ export default function Home() {
     }
   }, [user]);
 
-  if (welcomed === null || authLoading) return null;
+  if (welcomed === null || detailsCollected === null || authLoading) return null;
 
   if (!welcomed) {
     return (
       <ErrorBoundary>
         <WelcomeScreen onContinue={() => setWelcomed(true)} />
+      </ErrorBoundary>
+    );
+  }
+
+  if (!detailsCollected) {
+    return (
+      <ErrorBoundary>
+        <UserDetailsForm onComplete={() => setDetailsCollected(true)} />
       </ErrorBoundary>
     );
   }

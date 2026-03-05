@@ -237,6 +237,11 @@ button, .btn-glow, .btn-glass {
   color: var(--text-tertiary);
 }
 
+select.glass-input option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
 .glass-input:focus {
   outline: none;
   background: rgba(255, 255, 255, 0.12);

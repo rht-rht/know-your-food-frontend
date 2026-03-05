@@ -7,7 +7,7 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { getAuthInstance, getDbInstance, googleProvider, isConfigured } from "../lib/firebase";
 import { SIGNUP_BONUS } from "../lib/credits";
 
@@ -20,6 +20,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   refreshCredits: () => Promise<void>;
   setCredits: (c: number) => void;
+  updateUserProfile: (uid: string, data: { displayName?: string; age?: number; country?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   refreshCredits: async () => {},
   setCredits: () => {},
+  updateUserProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -52,6 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         photoURL: u.photoURL || "",
         credits: SIGNUP_BONUS,
         totalAnalyses: 0,
+        age: null,
+        country: null,
         createdAt: serverTimestamp(),
       });
       setCredits(SIGNUP_BONUS);
@@ -118,9 +122,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCredits(0);
   }
 
+  async function updateUserProfile(uid: string, data: { displayName?: string; age?: number; country?: string }) {
+    const db = getDbInstance();
+    if (!db) return;
+    const ref = doc(db, "users", uid);
+    await updateDoc(ref, data);
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user, loading, credits, firebaseReady, signInWithGoogle, signOut, refreshCredits, setCredits }}
+      value={{ user, loading, credits, firebaseReady, signInWithGoogle, signOut, refreshCredits, setCredits, updateUserProfile }}
     >
       {children}
     </AuthContext.Provider>
