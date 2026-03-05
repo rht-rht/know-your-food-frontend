@@ -11,8 +11,7 @@ export const SIGNUP_BONUS = 10;
 export const DAILY_LOGIN_BONUS = 2;
 export const SHARE_REWARD = 1;
 export const SHARE_DAILY_MAX = 5;
-export const REWARDED_AD_CREDITS = 3;
-export const REWARDED_AD_DAILY_MAX = 5;
+export const REWARDED_AD_CREDITS = 2;
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -93,19 +92,7 @@ export async function claimDailyBonus(uid: string): Promise<boolean> {
 
 // --- Rewarded ad credits ---
 
-const REWARDED_AD_KEY = "kyf-rewarded-ads";
-
-export function getRewardedAdsToday(): number {
-  return getDailyCount(REWARDED_AD_KEY);
-}
-
-export function canWatchRewardedAd(): boolean {
-  return getRewardedAdsToday() < REWARDED_AD_DAILY_MAX;
-}
-
 export async function claimRewardedAdCredit(uid: string): Promise<number> {
-  if (!canWatchRewardedAd()) return 0;
-  incrementDailyCount(REWARDED_AD_KEY);
   return await addUserCredits(uid, REWARDED_AD_CREDITS);
 }
 

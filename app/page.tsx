@@ -6,9 +6,8 @@ import { useAuth } from "./contexts/AuthContext";
 import { saveAnalysisToFirestore } from "./lib/firestore-history";
 import {
   getAnonCreditsRemaining, consumeAnonCredit, consumeUserCredits, addUserCredits,
-  claimShareCredit, claimRewardedAdCredit, canWatchRewardedAd, canShareForCredit,
-  getRewardedAdsToday, getSharesToday,
-  CREDIT_COST_TEXT, CREDIT_COST_MEDIA, REWARDED_AD_CREDITS, REWARDED_AD_DAILY_MAX,
+  claimShareCredit, claimRewardedAdCredit, canShareForCredit, getSharesToday,
+  CREDIT_COST_TEXT, CREDIT_COST_MEDIA, REWARDED_AD_CREDITS,
   SHARE_REWARD, SHARE_DAILY_MAX, SIGNUP_BONUS,
 } from "./lib/credits";
 
@@ -2310,8 +2309,8 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
       {open && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-12 w-72 rounded-2xl border border-white/[0.12] z-50 animate-scale-in origin-top-left overflow-hidden"
-               style={{ background: "linear-gradient(145deg, #1e1e2e 0%, #181825 100%)" }}>
+          <div className="absolute left-0 top-12 w-72 rounded-2xl border border-white/[0.18] z-50 animate-scale-in origin-top-left overflow-hidden shadow-2xl shadow-black/60"
+               style={{ background: "linear-gradient(145deg, #2d2d44 0%, #252538 100%)" }}>
 
             <div className="px-4 pt-5 pb-4 flex items-center gap-3.5 border-b border-white/[0.08]">
               {user.photoURL ? (
@@ -2351,7 +2350,7 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
               <div className="space-y-1.5">
                 <button
                   onClick={async () => {
-                    if (!user || !canWatchRewardedAd()) return;
+                    if (!user) return;
                     if (typeof window !== "undefined" && (window as any).__showRewardedAd) {
                       (window as any).__showRewardedAd();
                     } else {
@@ -2360,12 +2359,11 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
                     }
                     setOpen(false);
                   }}
-                  disabled={!canWatchRewardedAd()}
-                  className="w-full text-left px-3 py-2 text-sm rounded-xl transition-colors flex items-center gap-2.5 disabled:opacity-30 disabled:cursor-not-allowed bg-amber-500/[0.08] hover:bg-amber-500/[0.15] text-amber-300/90"
+                  className="w-full text-left px-3 py-2 text-sm rounded-xl transition-colors flex items-center gap-2.5 bg-amber-500/[0.08] hover:bg-amber-500/[0.15] text-amber-300/90"
                 >
                   <span className="text-base">▶</span>
                   <span className="flex-1">Watch ad</span>
-                  <span className="text-xs text-amber-400/60">+{REWARDED_AD_CREDITS} cr &middot; {REWARDED_AD_DAILY_MAX - getRewardedAdsToday()}/{REWARDED_AD_DAILY_MAX}</span>
+                  <span className="text-xs text-amber-400/60">+{REWARDED_AD_CREDITS} cr</span>
                 </button>
                 <div className="flex items-center gap-2.5 px-3 py-2 text-sm text-white/40">
                   <span className="text-base">📤</span>
@@ -2894,7 +2892,7 @@ function HomeContent() {
                   Sign in for {SIGNUP_BONUS} free credits
                 </button>
               )}
-              {user && canWatchRewardedAd() && (
+              {user && (
                 <button
                   onClick={async () => {
                     if (typeof window !== "undefined" && (window as any).__showRewardedAd) {
@@ -2909,13 +2907,7 @@ function HomeContent() {
                 >
                   <span className="text-lg">▶</span>
                   Watch an ad for {REWARDED_AD_CREDITS} credits
-                  <span className="text-[10px] text-white/60 ml-1">({REWARDED_AD_DAILY_MAX - getRewardedAdsToday()} left today)</span>
                 </button>
-              )}
-              {user && !canWatchRewardedAd() && (
-                <div className="w-full py-3 rounded-xl bg-white/[0.04] text-white/30 text-sm text-center">
-                  Daily ad limit reached ({REWARDED_AD_DAILY_MAX}/{REWARDED_AD_DAILY_MAX})
-                </div>
               )}
               <button
                 onClick={() => setShowNoCreditModal(false)}
