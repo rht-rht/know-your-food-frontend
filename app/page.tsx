@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, Component, ErrorInfo, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Html5Qrcode } from "html5-qrcode";
 import { useAuth } from "./contexts/AuthContext";
 import { saveAnalysisToFirestore } from "./lib/firestore-history";
@@ -2306,10 +2307,10 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
         </span>
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <>
           <div className="fixed inset-0 bg-black/50 z-[998]" onClick={() => setOpen(false)} />
-          <div className="fixed left-4 right-4 top-20 sm:absolute sm:left-0 sm:right-auto sm:top-12 w-auto sm:w-72 rounded-2xl border border-white/[0.15] z-[999] origin-top-left overflow-hidden bg-black"
+          <div className="fixed left-4 right-4 top-20 max-w-sm mx-auto rounded-2xl border border-white/[0.15] z-[999] overflow-hidden bg-black"
                style={{ boxShadow: "0 20px 60px rgba(0,0,0,1)" }}>
 
             <div className="px-4 pt-5 pb-4 flex items-center gap-3.5 border-b border-white/[0.15]">
@@ -2396,7 +2397,8 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
               </button>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
