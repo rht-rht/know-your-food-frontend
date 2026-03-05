@@ -9,6 +9,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getAuthInstance, getDbInstance, googleProvider, isConfigured } from "../lib/firebase";
+import { SIGNUP_BONUS } from "../lib/credits";
 
 interface AuthContextType {
   user: User | null;
@@ -49,11 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayName: u.displayName || "",
         email: u.email || "",
         photoURL: u.photoURL || "",
-        credits: 5,
+        credits: SIGNUP_BONUS,
         totalAnalyses: 0,
         createdAt: serverTimestamp(),
       });
-      setCredits(5);
+      setCredits(SIGNUP_BONUS);
     } else {
       setCredits(snap.data().credits ?? 0);
     }

@@ -5,21 +5,41 @@ const ANON_CREDITS_KEY = "kyf-anon-credits";
 const ANON_DATE_KEY = "kyf-anon-date";
 const ANON_DAILY_LIMIT = 3;
 
+export const CREDIT_COST_TEXT = 1;
+export const CREDIT_COST_MEDIA = 2;
+export const SIGNUP_BONUS = 10;
+export const DAILY_LOGIN_BONUS = 2;
+export const SHARE_REWARD = 1;
+export const SHARE_DAILY_MAX = 5;
+export const REWARDED_AD_CREDITS = 3;
+export const REWARDED_AD_DAILY_MAX = 5;
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function getDailyCount(key: string): number {
+  if (typeof window === "undefined") return 0;
+  const dateKey = `${key}-date`;
+  if (localStorage.getItem(dateKey) !== todayStr()) {
+    localStorage.setItem(dateKey, todayStr());
+    localStorage.setItem(key, "0");
+    return 0;
+  }
+  return parseInt(localStorage.getItem(key) || "0", 10);
+}
+
+function incrementDailyCount(key: string): void {
+  const dateKey = `${key}-date`;
+  localStorage.setItem(dateKey, todayStr());
+  const current = getDailyCount(key);
+  localStorage.setItem(key, String(current + 1));
 }
 
 // --- Anonymous credit tracking (localStorage) ---
 
 export function getAnonCreditsUsed(): number {
-  if (typeof window === "undefined") return 0;
-  const stored = localStorage.getItem(ANON_DATE_KEY);
-  if (stored !== todayStr()) {
-    localStorage.setItem(ANON_DATE_KEY, todayStr());
-    localStorage.setItem(ANON_CREDITS_KEY, "0");
-    return 0;
-  }
-  return parseInt(localStorage.getItem(ANON_CREDITS_KEY) || "0", 10);
+  return getDailyCount(ANON_CREDITS_KEY);
 }
 
 export function getAnonCreditsRemaining(): number {
@@ -29,7 +49,7 @@ export function getAnonCreditsRemaining(): number {
 export function consumeAnonCredit(): boolean {
   const used = getAnonCreditsUsed();
   if (used >= ANON_DAILY_LIMIT) return false;
-  localStorage.setItem(ANON_CREDITS_KEY, String(used + 1));
+  incrementDailyCount(ANON_CREDITS_KEY);
   return true;
 }
 
@@ -42,12 +62,12 @@ export async function getUserCredits(uid: string): Promise<number> {
   return snap.exists() ? (snap.data().credits ?? 0) : 0;
 }
 
-export async function consumeUserCredit(uid: string): Promise<boolean> {
+export async function consumeUserCredits(uid: string, amount: number): Promise<boolean> {
   const db = getDbInstance();
   if (!db) return false;
   const credits = await getUserCredits(uid);
-  if (credits <= 0) return false;
-  await updateDoc(doc(db, "users", uid), { credits: increment(-1) });
+  if (credits < amount) return false;
+  await updateDoc(doc(db, "users", uid), { credits: increment(-amount) });
   return true;
 }
 
@@ -67,16 +87,46 @@ export async function claimDailyBonus(uid: string): Promise<boolean> {
   const lastClaim = localStorage.getItem(DAILY_BONUS_KEY);
   if (lastClaim === todayStr()) return false;
   localStorage.setItem(DAILY_BONUS_KEY, todayStr());
-  await addUserCredits(uid, 1);
+  await addUserCredits(uid, DAILY_LOGIN_BONUS);
   return true;
+}
+
+// --- Rewarded ad credits ---
+
+const REWARDED_AD_KEY = "kyf-rewarded-ads";
+
+export function getRewardedAdsToday(): number {
+  return getDailyCount(REWARDED_AD_KEY);
+}
+
+export function canWatchRewardedAd(): boolean {
+  return getRewardedAdsToday() < REWARDED_AD_DAILY_MAX;
+}
+
+export async function claimRewardedAdCredit(uid: string): Promise<number> {
+  if (!canWatchRewardedAd()) return 0;
+  incrementDailyCount(REWARDED_AD_KEY);
+  return await addUserCredits(uid, REWARDED_AD_CREDITS);
 }
 
 // --- Share-to-earn ---
 
+const SHARE_COUNT_KEY = "kyf-share-count";
+
+export function getSharesToday(): number {
+  return getDailyCount(SHARE_COUNT_KEY);
+}
+
+export function canShareForCredit(): boolean {
+  return getSharesToday() < SHARE_DAILY_MAX;
+}
+
 export async function claimShareCredit(uid: string, resultId: string): Promise<boolean> {
-  const key = `kyf-shared-${resultId}`;
-  if (localStorage.getItem(key)) return false;
-  localStorage.setItem(key, "1");
-  await addUserCredits(uid, 1);
+  const perResultKey = `kyf-shared-${resultId}`;
+  if (localStorage.getItem(perResultKey)) return false;
+  if (!canShareForCredit()) return false;
+  localStorage.setItem(perResultKey, "1");
+  incrementDailyCount(SHARE_COUNT_KEY);
+  await addUserCredits(uid, SHARE_REWARD);
   return true;
 }

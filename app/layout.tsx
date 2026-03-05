@@ -52,6 +52,12 @@ export default function RootLayout({
             crossOrigin="anonymous"
           />
         )}
+        {process.env.NEXT_PUBLIC_AD_MANAGER_REWARDED_SLOT && (
+          <script
+            async
+            src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"
+          />
+        )}
       </head>
       <body className="antialiased">
         <Providers>
