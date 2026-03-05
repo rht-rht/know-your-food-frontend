@@ -2308,11 +2308,11 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
 
       {open && (
         <>
-          <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-12 w-72 rounded-2xl border border-white/[0.18] z-50 animate-scale-in origin-top-left overflow-hidden shadow-2xl shadow-black/60"
-               style={{ background: "linear-gradient(145deg, #2d2d44 0%, #252538 100%)" }}>
+          <div className="fixed inset-0 bg-black/70 z-40" onClick={() => setOpen(false)} />
+          <div className="fixed left-4 right-4 top-20 sm:absolute sm:left-0 sm:right-auto sm:top-12 w-auto sm:w-72 rounded-2xl border border-white/20 z-50 animate-scale-in origin-top-left overflow-hidden"
+               style={{ background: "#1a1a2e", boxShadow: "0 20px 60px rgba(0,0,0,0.9)" }}>
 
-            <div className="px-4 pt-5 pb-4 flex items-center gap-3.5 border-b border-white/[0.08]">
+            <div className="px-4 pt-5 pb-4 flex items-center gap-3.5 border-b border-white/[0.12]">
               {user.photoURL ? (
                 <img src={user.photoURL} alt="" className="w-14 h-14 rounded-2xl ring-2 ring-indigo-500/30 flex-shrink-0" referrerPolicy="no-referrer" />
               ) : (
@@ -2322,31 +2322,31 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
               )}
               <div className="min-w-0">
                 <p className="text-[15px] font-semibold text-white truncate">{user.displayName || "User"}</p>
-                <p className="text-xs text-white/50 truncate">{user.email}</p>
+                <p className="text-xs text-white/60 truncate">{user.email}</p>
                 {memberSince && (
-                  <p className="text-[11px] text-white/30 mt-0.5">Member since {memberSince}</p>
+                  <p className="text-[11px] text-white/40 mt-0.5">Member since {memberSince}</p>
                 )}
               </div>
             </div>
 
-            <div className="px-4 py-3 border-b border-white/[0.08]">
+            <div className="px-4 py-3 border-b border-white/[0.12]">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Credits</span>
+                <span className="text-xs font-medium text-white/60 uppercase tracking-wider">Credits</span>
                 <span className="text-lg font-bold text-amber-400 tabular-nums">{credits} ✦</span>
               </div>
-              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+              <div className="w-full h-1.5 rounded-full bg-white/[0.1] overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
                   style={{ width: `${Math.min(100, (credits / SIGNUP_BONUS) * 100)}%` }}
                 />
               </div>
               <div className="flex items-center justify-between mt-1.5">
-                <p className="text-[11px] text-white/30">Text: {CREDIT_COST_TEXT} cr &middot; Media: {CREDIT_COST_MEDIA} cr</p>
+                <p className="text-[11px] text-white/40">Text: {CREDIT_COST_TEXT} cr &middot; Media: {CREDIT_COST_MEDIA} cr</p>
               </div>
             </div>
 
-            <div className="px-4 py-3 border-b border-white/[0.08]">
-              <p className="text-[10px] font-medium text-white/40 uppercase tracking-wider mb-2">Earn Credits</p>
+            <div className="px-4 py-3 border-b border-white/[0.12]">
+              <p className="text-[10px] font-medium text-white/50 uppercase tracking-wider mb-2">Earn Credits</p>
               <div className="space-y-1.5">
                 <button
                   onClick={async () => {
@@ -2359,28 +2359,28 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
                     }
                     setOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm rounded-xl transition-colors flex items-center gap-2.5 bg-amber-500/[0.08] hover:bg-amber-500/[0.15] text-amber-300/90"
+                  className="w-full text-left px-3 py-2 text-sm rounded-xl transition-colors flex items-center gap-2.5 bg-amber-500/[0.1] hover:bg-amber-500/[0.18] text-amber-300"
                 >
                   <span className="text-base">▶</span>
                   <span className="flex-1">Watch ad</span>
-                  <span className="text-xs text-amber-400/60">+{REWARDED_AD_CREDITS} cr</span>
+                  <span className="text-xs text-amber-400/70">+{REWARDED_AD_CREDITS} cr</span>
                 </button>
-                <div className="flex items-center gap-2.5 px-3 py-2 text-sm text-white/40">
+                <div className="flex items-center gap-2.5 px-3 py-2 text-sm text-white/50">
                   <span className="text-base">📤</span>
                   <span className="flex-1">Share a result</span>
-                  <span className="text-xs text-white/30">+{SHARE_REWARD} cr &middot; {SHARE_DAILY_MAX - getSharesToday()}/{SHARE_DAILY_MAX}</span>
+                  <span className="text-xs text-white/40">+{SHARE_REWARD} cr &middot; {SHARE_DAILY_MAX - getSharesToday()}/{SHARE_DAILY_MAX}</span>
                 </div>
               </div>
             </div>
 
-            <div className="px-4 py-3 grid grid-cols-2 gap-2 border-b border-white/[0.08]">
-              <div className="bg-white/[0.04] rounded-xl px-3 py-2.5 text-center">
+            <div className="px-4 py-3 grid grid-cols-2 gap-2 border-b border-white/[0.12]">
+              <div className="bg-white/[0.06] rounded-xl px-3 py-2.5 text-center">
                 <p className="text-lg font-bold text-white tabular-nums">{analysisCount}</p>
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">Analyses</p>
+                <p className="text-[10px] text-white/50 uppercase tracking-wider">Analyses</p>
               </div>
-              <div className="bg-white/[0.04] rounded-xl px-3 py-2.5 text-center">
+              <div className="bg-white/[0.06] rounded-xl px-3 py-2.5 text-center">
                 <p className="text-lg font-bold text-emerald-400">Free</p>
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">Plan</p>
+                <p className="text-[10px] text-white/50 uppercase tracking-wider">Plan</p>
               </div>
             </div>
 
