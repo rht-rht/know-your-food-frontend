@@ -2261,7 +2261,17 @@ function ResultCard({
 function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
   const { user, credits, setCredits, signInWithGoogle, signOut, refreshCredits, loading: authLoading, firebaseReady } = useAuth();
   const [open, setOpen] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showBuyCredits, setShowBuyCredits] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const creditPacks = [
+    { id: "starter", credits: 20, price: 0.99, label: "Starter", popular: false },
+    { id: "value", credits: 60, price: 1.99, label: "Value Pack", popular: true },
+    { id: "pro", credits: 150, price: 3.99, label: "Pro Pack", popular: false },
+    { id: "mega", credits: 500, price: 9.99, label: "Mega Pack", popular: false },
+  ];
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -2384,6 +2394,14 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
                   <span className="flex-1">Share a result</span>
                   <span className="text-xs text-white/50">+{SHARE_REWARD} cr &middot; {SHARE_DAILY_MAX - getSharesToday()}/{SHARE_DAILY_MAX}</span>
                 </div>
+                <button
+                  onClick={() => { setShowBuyCredits(true); setOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm rounded-xl transition-colors flex items-center gap-2.5 bg-indigo-500/[0.15] hover:bg-indigo-500/[0.25] text-indigo-300"
+                >
+                  <span className="text-base">💎</span>
+                  <span className="flex-1">Buy credits</span>
+                  <span className="text-xs text-indigo-400/80">from $0.99</span>
+                </button>
               </div>
             </div>
 
@@ -2398,9 +2416,18 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
               </div>
             </div>
 
-            <div className="p-2">
+            <div className="p-2 space-y-0.5">
               <button
-                onClick={() => { signOut(); setOpen(false); }}
+                onClick={() => { setShowAbout(true); setOpen(false); }}
+                className="w-full text-left px-3 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/[0.08] rounded-xl transition-colors flex items-center gap-2.5"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                About this app
+              </button>
+              <button
+                onClick={() => { setShowSignOutConfirm(true); setOpen(false); }}
                 className="w-full text-left px-3 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/[0.12] rounded-xl transition-colors flex items-center gap-2.5 font-medium"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2411,6 +2438,165 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
             </div>
           </div>
         </>,
+        document.body
+      )}
+
+      {/* Sign Out Confirmation */}
+      {showSignOutConfirm && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowSignOutConfirm(false)} />
+          <div className="relative bg-[#111] border border-white/[0.15] rounded-2xl p-6 max-w-xs w-full text-center" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.9)" }}>
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-500/15 flex items-center justify-center">
+              <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-1">Sign out?</h3>
+            <p className="text-sm text-white/50 mb-6">Your credits and history will be saved for when you return.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSignOutConfirm(false)}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white/70 bg-white/[0.08] hover:bg-white/[0.12] rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { signOut(); setShowSignOutConfirm(false); }}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-500/80 hover:bg-red-500 rounded-xl transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* About This App Modal */}
+      {showAbout && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowAbout(false)} />
+          <div className="relative bg-[#111] border border-white/[0.15] rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.9)" }}>
+            <div className="sticky top-0 bg-[#111] border-b border-white/[0.1] px-5 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Know Your Food</h3>
+              <button onClick={() => setShowAbout(false)} className="w-8 h-8 rounded-lg bg-white/[0.08] flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="px-5 py-4 space-y-5">
+              <div>
+                <h4 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-2">Why this app exists</h4>
+                <p className="text-sm text-white/70 leading-relaxed">
+                  Every day we see health claims on social media, food labels, and news articles. Many are misleading or lack context.
+                  Know Your Food uses AI and scientific research to give you evidence-based answers so you can make informed decisions about your health and nutrition.
+                </p>
+              </div>
+
+              <div className="border-t border-white/[0.1] pt-4">
+                <h4 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider mb-3">How to use</h4>
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0 text-sm">💬</div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">Type a claim</p>
+                      <p className="text-xs text-white/50">E.g. &quot;Eating bananas at night causes weight gain&quot;</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-pink-500/20 flex items-center justify-center flex-shrink-0 text-sm">🔗</div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">Paste a reel or shorts URL</p>
+                      <p className="text-xs text-white/50">Instagram reels, YouTube shorts with health claims</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0 text-sm">🎤</div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">Record your voice</p>
+                      <p className="text-xs text-white/50">Speak the claim and it auto-stops after 3s of silence</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0 text-sm">📷</div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">Upload images</p>
+                      <p className="text-xs text-white/50">Food labels, product claims — up to 5 images at once</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-white/[0.1] pt-4">
+                <h4 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-2">Credits</h4>
+                <p className="text-sm text-white/70 leading-relaxed mb-2">
+                  Each analysis uses credits. Text costs {CREDIT_COST_TEXT} credit, and media (URLs, images, audio) costs {CREDIT_COST_MEDIA} credits. You can earn credits by:
+                </p>
+                <ul className="text-sm text-white/60 space-y-1 ml-1">
+                  <li className="flex items-center gap-2"><span className="text-amber-400">▶</span> Watching a short ad (+{REWARDED_AD_CREDITS} cr)</li>
+                  <li className="flex items-center gap-2"><span className="text-amber-400">📤</span> Sharing results (+{SHARE_REWARD} cr)</li>
+                  <li className="flex items-center gap-2"><span className="text-amber-400">📅</span> Daily login bonus (+2 cr)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Buy Credits Modal */}
+      {showBuyCredits && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowBuyCredits(false)} />
+          <div className="relative bg-[#111] border border-white/[0.15] rounded-2xl max-w-sm w-full overflow-hidden" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.9)" }}>
+            <div className="px-5 py-4 border-b border-white/[0.1] flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Buy Credits</h3>
+              <button onClick={() => setShowBuyCredits(false)} className="w-8 h-8 rounded-lg bg-white/[0.08] flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="px-5 py-4 space-y-2.5">
+              {creditPacks.map((pack) => (
+                <button
+                  key={pack.id}
+                  onClick={() => {
+                    alert(`Payment integration coming soon! You selected: ${pack.label} (${pack.credits} credits for $${pack.price})`);
+                  }}
+                  className={`w-full rounded-xl p-3.5 border transition-colors text-left relative ${
+                    pack.popular
+                      ? "border-amber-500/40 bg-amber-500/[0.08] hover:bg-amber-500/[0.15]"
+                      : "border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08]"
+                  }`}
+                >
+                  {pack.popular && (
+                    <span className="absolute -top-2.5 right-3 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-black rounded-full">
+                      Best Value
+                    </span>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{pack.label}</p>
+                      <p className="text-xs text-white/50 mt-0.5">
+                        {pack.credits} credits &middot; ~{Math.floor(pack.credits / CREDIT_COST_TEXT)} text or ~{Math.floor(pack.credits / CREDIT_COST_MEDIA)} media analyses
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-3">
+                      <p className="text-lg font-bold text-white">${pack.price}</p>
+                      <p className="text-[10px] text-white/40">${(pack.price / pack.credits).toFixed(3)}/cr</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="px-5 py-3 border-t border-white/[0.1]">
+              <p className="text-[11px] text-white/40 text-center">
+                Credits never expire. You can also earn free credits by watching ads or sharing results.
+              </p>
+            </div>
+          </div>
+        </div>,
         document.body
       )}
     </div>
@@ -2447,6 +2633,7 @@ function HomeContent() {
   } | null>(null);
   const [productNotFound, setProductNotFound] = useState<{ barcode: string; show: boolean } | null>(null);
   const [showNoCreditModal, setShowNoCreditModal] = useState(false);
+  const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
   const [stagedImages, setStagedImages] = useState<File[]>([]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -2959,6 +3146,15 @@ function HomeContent() {
                   Watch an ad for {REWARDED_AD_CREDITS} credits
                 </button>
               )}
+              {user && (
+                <button
+                  onClick={() => { setShowNoCreditModal(false); setShowBuyCreditsModal(true); }}
+                  className="w-full py-3 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-medium text-sm flex items-center justify-center gap-2 tap-highlight hover:bg-indigo-500/30 transition-colors"
+                >
+                  <span>💎</span>
+                  Buy credits
+                </button>
+              )}
               <button
                 onClick={() => setShowNoCreditModal(false)}
                 className="w-full py-3 rounded-xl bg-white/[0.06] text-white/60 text-sm tap-highlight hover:bg-white/[0.1] transition-colors"
@@ -2971,6 +3167,63 @@ function HomeContent() {
                 Share results to earn {SHARE_REWARD} credit each (max {SHARE_DAILY_MAX}/day)
               </p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Buy Credits Modal (from NoCreditModal) */}
+      {showBuyCreditsModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 animate-fade-in" onClick={() => setShowBuyCreditsModal(false)}>
+          <div className="bg-[#111] border border-white/[0.15] rounded-2xl max-w-sm w-full overflow-hidden animate-scale-in" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.9)" }} onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-white/[0.1] flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Buy Credits</h3>
+              <button onClick={() => setShowBuyCreditsModal(false)} className="w-8 h-8 rounded-lg bg-white/[0.08] flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-2.5">
+              {[
+                { id: "starter", credits: 20, price: 0.99, label: "Starter", popular: false },
+                { id: "value", credits: 60, price: 1.99, label: "Value Pack", popular: true },
+                { id: "pro", credits: 150, price: 3.99, label: "Pro Pack", popular: false },
+                { id: "mega", credits: 500, price: 9.99, label: "Mega Pack", popular: false },
+              ].map((pack) => (
+                <button
+                  key={pack.id}
+                  onClick={() => {
+                    alert(`Payment integration coming soon! You selected: ${pack.label} (${pack.credits} credits for $${pack.price})`);
+                  }}
+                  className={`w-full rounded-xl p-3.5 border transition-colors text-left relative ${
+                    pack.popular
+                      ? "border-amber-500/40 bg-amber-500/[0.08] hover:bg-amber-500/[0.15]"
+                      : "border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08]"
+                  }`}
+                >
+                  {pack.popular && (
+                    <span className="absolute -top-2.5 right-3 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-black rounded-full">
+                      Best Value
+                    </span>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{pack.label}</p>
+                      <p className="text-xs text-white/50 mt-0.5">
+                        {pack.credits} credits &middot; ~{Math.floor(pack.credits / CREDIT_COST_TEXT)} text or ~{Math.floor(pack.credits / CREDIT_COST_MEDIA)} media analyses
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-3">
+                      <p className="text-lg font-bold text-white">${pack.price}</p>
+                      <p className="text-[10px] text-white/40">${(pack.price / pack.credits).toFixed(3)}/cr</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="px-5 py-3 border-t border-white/[0.1]">
+              <p className="text-[11px] text-white/40 text-center">
+                Credits never expire. You can also earn free credits by watching ads or sharing results.
+              </p>
+            </div>
           </div>
         </div>
       )}
