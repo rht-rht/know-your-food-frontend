@@ -6,7 +6,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import { useAuth } from "./contexts/AuthContext";
 import { saveAnalysisToFirestore } from "./lib/firestore-history";
 import {
-  getAnonCreditsRemaining, consumeAnonCredit, consumeUserCredits, addUserCredits,
+  getAnonCreditsRemaining, consumeAnonCredit, consumeUserCredits, addUserCredits, getUserCredits,
   claimShareCredit, claimRewardedAdCredit, canShareForCredit, getSharesToday,
   CREDIT_COST_TEXT, CREDIT_COST_MEDIA, REWARDED_AD_CREDITS,
   SHARE_REWARD, SHARE_DAILY_MAX, SIGNUP_BONUS,
@@ -705,7 +705,20 @@ function SocialShareMenu({
       },
     },
     {
-      name: "Copy Link",
+      name: "Instagram",
+      icon: (
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+        </svg>
+      ),
+      color: "bg-[#E4405F]/20 text-[#E4405F] hover:bg-[#E4405F]/30",
+      action: async () => {
+        await navigator.clipboard.writeText(shareText);
+        window.open("https://www.instagram.com/", "_blank");
+      },
+    },
+    {
+      name: "Copy Content",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -2434,6 +2447,7 @@ function HomeContent() {
   } | null>(null);
   const [productNotFound, setProductNotFound] = useState<{ barcode: string; show: boolean } | null>(null);
   const [showNoCreditModal, setShowNoCreditModal] = useState(false);
+  const [stagedImages, setStagedImages] = useState<File[]>([]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -2511,18 +2525,26 @@ function HomeContent() {
     setHistory([]);
   };
 
-  const checkAndConsumeCredit = async (cost: number = CREDIT_COST_TEXT): Promise<boolean> => {
+  const hasEnoughCredits = async (cost: number = CREDIT_COST_TEXT): Promise<boolean> => {
     if (!firebaseReady) return true;
     if (user) {
-      const ok = await consumeUserCredits(user.uid, cost);
-      if (!ok) { setShowNoCreditModal(true); return false; }
-      setCredits(credits - cost);
+      const current = await getUserCredits(user.uid);
+      if (current < cost) { setShowNoCreditModal(true); return false; }
       return true;
     }
     const remaining = getAnonCreditsRemaining();
     if (remaining <= 0) { setShowNoCreditModal(true); return false; }
-    consumeAnonCredit();
     return true;
+  };
+
+  const consumeCredit = async (cost: number = CREDIT_COST_TEXT): Promise<void> => {
+    if (!firebaseReady) return;
+    if (user) {
+      await consumeUserCredits(user.uid, cost);
+      setCredits(credits - cost);
+    } else {
+      consumeAnonCredit();
+    }
   };
 
   const handleManualProductEntry = async (productInfo: string) => {
@@ -2641,6 +2663,10 @@ function HomeContent() {
   };
 
   const handleAnalyze = async () => {
+    if (stagedImages.length > 0) {
+      return analyzeImages();
+    }
+
     if (!inputText.trim()) {
       setError("Please enter a claim or paste the reel or YouTube Shorts link");
       return;
@@ -2650,8 +2676,8 @@ function HomeContent() {
     const looksLikeUrl = /^https?:\/\//i.test(trimmed) || /\.(com|net|org|io)\//i.test(trimmed);
     const cost = looksLikeUrl ? CREDIT_COST_MEDIA : CREDIT_COST_TEXT;
 
-    const hasCredit = await checkAndConsumeCredit(cost);
-    if (!hasCredit) return;
+    const canProceed = await hasEnoughCredits(cost);
+    if (!canProceed) return;
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -2675,6 +2701,7 @@ function HomeContent() {
       if (!res.ok) throw new Error(data.detail || "Backend error");
 
       setResult(data);
+      await consumeCredit(cost);
     } catch (err: any) {
       if (err.name === "AbortError") {
         return;
@@ -2760,8 +2787,8 @@ function HomeContent() {
       return;
     }
 
-    const hasCredit = await checkAndConsumeCredit(CREDIT_COST_MEDIA);
-    if (!hasCredit) return;
+    const canProceed = await hasEnoughCredits(CREDIT_COST_MEDIA);
+    if (!canProceed) return;
 
     const blob = new Blob(chunks, { type: "audio/webm" });
     const formData = new FormData();
@@ -2789,6 +2816,7 @@ function HomeContent() {
       if (!res.ok) throw new Error(data.detail || data.error || "Audio error");
 
       setResult(data);
+      await consumeCredit(CREDIT_COST_MEDIA);
     } catch (err: any) {
       if (err.name === "AbortError") return;
       const msg = err.message || "Audio analysis failed";
@@ -2798,12 +2826,28 @@ function HomeContent() {
     setLoading(false);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    const hasCredit = await checkAndConsumeCredit(CREDIT_COST_MEDIA);
-    if (!hasCredit) return;
+    const newFiles = Array.from(files);
+    setStagedImages((prev) => {
+      const combined = [...prev, ...newFiles].slice(0, 5);
+      return combined;
+    });
+    setError("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeStagedImage = (index: number) => {
+    setStagedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const analyzeImages = async () => {
+    if (stagedImages.length === 0) return;
+
+    const canProceed = await hasEnoughCredits(CREDIT_COST_MEDIA);
+    if (!canProceed) return;
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -2811,13 +2855,15 @@ function HomeContent() {
     abortControllerRef.current = new AbortController();
 
     setCurrentInputType("image");
-    setInputText(`Image analysis (${files.length} file${files.length > 1 ? "s" : ""})`);
     setResult(null);
     setLoading(true);
     setError("");
 
     const formData = new FormData();
-    Array.from(files).forEach((file) => formData.append("files", file));
+    stagedImages.forEach((file) => formData.append("files", file));
+    if (inputText.trim()) {
+      formData.append("additional_text", inputText.trim());
+    }
 
     try {
       const res = await fetch(`${API_URL}/analyze/images`, {
@@ -2830,6 +2876,8 @@ function HomeContent() {
       if (!res.ok) throw new Error(data.detail || "Image error");
 
       setResult(data);
+      await consumeCredit(CREDIT_COST_MEDIA);
+      setStagedImages([]);
     } catch (err: any) {
       if (err.name === "AbortError") return;
       setError(err.message || "Image analysis failed");
@@ -2961,12 +3009,56 @@ function HomeContent() {
           <div className="glass-vibrant rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 animate-card-enter" style={{ animationDelay: "0.1s" }}>
             <input
               type="text"
-              placeholder="Type a claim or paste Reel / YT Shorts URL..."
+              placeholder={stagedImages.length > 0 ? "Add a concern or question about these images (optional)..." : "Type a claim or paste Reel / YT Shorts URL..."}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               className="glass-input mb-4 sm:mb-5 text-base"
             />
+
+            {/* Staged Image Thumbnails */}
+            {stagedImages.length > 0 && (
+              <div className="mb-4 sm:mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-white/50">{stagedImages.length}/5 image{stagedImages.length > 1 ? "s" : ""} selected</span>
+                  <button
+                    onClick={() => setStagedImages([])}
+                    className="text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {stagedImages.map((file, idx) => (
+                    <div key={`${file.name}-${idx}`} className="relative group w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border border-white/10">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => removeStagedImage(idx)}
+                        className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-red-500/80 transition-colors"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                  {stagedImages.length < 5 && (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg border border-dashed border-white/20 flex items-center justify-center text-white/30 hover:text-white/50 hover:border-white/30 transition-colors"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-2 sm:gap-3">
               <button
@@ -2980,6 +3072,8 @@ function HomeContent() {
                     <span className="hidden sm:inline">Analyzing</span>
                     <span className="sm:hidden">...</span>
                   </span>
+                ) : stagedImages.length > 0 ? (
+                  `Analyze ${stagedImages.length} image${stagedImages.length > 1 ? "s" : ""}`
                 ) : (
                   "Analyze"
                 )}
