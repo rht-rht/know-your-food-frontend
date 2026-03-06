@@ -3026,6 +3026,17 @@ function HomeContent() {
       return;
     }
 
+    // URL analysis is not supported in the web app (moved to native app)
+    try {
+      const u = new URL(inputText.trim());
+      if (u.protocol === "http:" || u.protocol === "https:") {
+        setError("URL analysis is not available in the web version. Paste the claim as text, or use the mobile app to share reels directly.");
+        return;
+      }
+    } catch {
+      /* not a URL */
+    }
+
     const cost = CREDIT_COST_TEXT;
 
     const canProceed = await hasEnoughCredits(cost);
