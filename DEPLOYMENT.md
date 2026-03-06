@@ -25,7 +25,7 @@ See [.env.example](.env.example) for a template. Summary:
 ## Backend environment variables
 
 - **Required**: `OPENAI_API_KEY`
-- **Optional**: `YTDL_COOKIES_FILE` — path to a Netscape-format cookie file for Instagram/reel access (see backend [render.yaml](../know-your-food/render.yaml)).
+- **Optional**: `YTDL_COOKIES_FILE` — path to a Netscape-format cookie file (e.g. exported from a browser). Helps both **YouTube** and **Instagram** URL analysis when the site blocks or rate-limits server requests. Step-by-step: backend [COOKIES.md](../know-your-food/COOKIES.md); env key in [render.yaml](../know-your-food/render.yaml).
 
 ## Checklist before going public
 
