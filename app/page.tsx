@@ -2271,7 +2271,7 @@ function ResultCard({
    User Menu Component
 =========================== */
 
-function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
+function UserMenu({ analysisCount = 0, onWatchAd }: { analysisCount?: number; onWatchAd?: () => void }) {
   const { user, credits, setCredits, signInWithGoogle, signOut, refreshCredits, loading: authLoading, firebaseReady } = useAuth();
   const [open, setOpen] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -2512,15 +2512,10 @@ function UserMenu({ analysisCount = 0 }: { analysisCount?: number }) {
               <p className="text-[10px] font-medium text-white/60 uppercase tracking-wider mb-2">Earn Credits</p>
               <div className="space-y-1.5">
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     if (!user) return;
-                    if (typeof window !== "undefined" && (window as any).__showRewardedAd) {
-                      (window as any).__showRewardedAd();
-                    } else {
-                      const newCredits = await claimRewardedAdCredit(user.uid);
-                      if (newCredits > 0) { setCredits(newCredits); refreshCredits(); }
-                    }
                     setOpen(false);
+                    onWatchAd?.();
                   }}
                   className="w-full text-left px-3 py-2 text-sm rounded-xl transition-colors flex items-center gap-2.5 bg-amber-500/[0.15] hover:bg-amber-500/[0.25] text-amber-300"
                 >
@@ -2791,6 +2786,7 @@ function HomeContent() {
   const [productNotFound, setProductNotFound] = useState<{ barcode: string; show: boolean } | null>(null);
   const [showNoCreditModal, setShowNoCreditModal] = useState(false);
   const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
+  const [showRewardedAdModal, setShowRewardedAdModal] = useState(false);
   const [stagedImages, setStagedImages] = useState<File[]>([]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -2827,6 +2823,18 @@ function HomeContent() {
       setPendingSharedAnalysis(true);
     }
   }, []);
+
+  // Handle return from Stripe checkout (credits=success)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("credits") === "success") {
+      window.history.replaceState({}, "", "/");
+      refreshCredits();
+      const t = setTimeout(refreshCredits, 2500);
+      return () => clearTimeout(t);
+    }
+  }, [refreshCredits]);
 
   // Debug: Track result state changes
   useEffect(() => {
@@ -3312,14 +3320,9 @@ function HomeContent() {
               )}
               {user && (
                 <button
-                  onClick={async () => {
-                    if (typeof window !== "undefined" && (window as any).__showRewardedAd) {
-                      (window as any).__showRewardedAd();
-                    } else {
-                      const newCredits = await claimRewardedAdCredit(user.uid);
-                      if (newCredits > 0) setCredits(newCredits);
-                    }
+                  onClick={() => {
                     setShowNoCreditModal(false);
+                    setShowRewardedAdModal(true);
                   }}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500/80 to-orange-500/80 text-white font-medium text-sm flex items-center justify-center gap-2 tap-highlight"
                 >
@@ -3385,8 +3388,27 @@ function HomeContent() {
                 return (
                   <button
                     key={pack.id}
-                    onClick={() => {
-                      alert(`Payment integration coming soon! You selected: ${pack.label} (${pack.credits} credits for ${cur}${price})`);
+                    onClick={async () => {
+                      if (!user) return;
+                      try {
+                        const res = await fetch("/api/credits/checkout", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            packId: pack.id,
+                            currency: isIN ? "inr" : "usd",
+                            uid: user.uid,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || "Checkout failed");
+                        if (data.url) {
+                          setShowBuyCreditsModal(false);
+                          window.location.href = data.url;
+                        } else throw new Error("No checkout URL");
+                      } catch (e) {
+                        alert(e instanceof Error ? e.message : "Payment unavailable. Try again later.");
+                      }
                     }}
                     className={`w-full rounded-xl p-3.5 border transition-colors text-left relative ${
                       pack.popular
@@ -3424,13 +3446,28 @@ function HomeContent() {
         </div>
         );
       })()}
+
+      {/* Rewarded ad: house ad when GAM not available */}
+      <RewardedAdModal
+        open={showRewardedAdModal}
+        onClose={() => setShowRewardedAdModal(false)}
+        onComplete={async () => {
+          if (user) {
+            const newCredits = await claimRewardedAdCredit(user.uid);
+            if (newCredits > 0) {
+              setCredits(newCredits);
+              refreshCredits();
+            }
+          }
+        }}
+      />
       
       <main className="min-h-screen min-h-dvh px-4 sm:px-6 py-12 pt-[max(48px,env(safe-area-inset-top))] pb-[max(24px,env(safe-area-inset-bottom))] md:py-24">
         <div className="max-w-2xl mx-auto">
           
           {/* Header */}
           <div className="flex items-center justify-between mb-6 sm:mb-8 animate-fade-in">
-            <UserMenu analysisCount={history.length} />
+            <UserMenu analysisCount={history.length} onWatchAd={() => setShowRewardedAdModal(true)} />
             <div className="text-center flex-1">
               <h1 className="text-3xl sm:text-5xl md:text-6xl font-semibold mb-2 sm:mb-3 tracking-tight animate-header-gradient">
                 Know Your Food
@@ -3701,7 +3738,7 @@ function guessCountryFromTimezone(): string {
   return "";
 }
 
-function UserDetailsForm({ onComplete }: { onComplete: () => void }) {
+function UserDetailsForm({ onComplete, exiting = false }: { onComplete: () => void; exiting?: boolean }) {
   const { user, updateUserProfile } = useAuth();
   const [name, setName] = useState(user?.displayName || "");
   const [age, setAge] = useState("");
@@ -3737,7 +3774,7 @@ function UserDetailsForm({ onComplete }: { onComplete: () => void }) {
   const isValid = name.trim().length > 0 && age && parseInt(age, 10) > 0 && parseInt(age, 10) < 120 && country;
 
   return (
-    <>
+    <div className={`page-transition-exit ${exiting ? "page-transition-exit-active" : ""}`}>
       <AnimatedBackground />
       <div className="min-h-screen min-h-dvh flex items-center justify-center px-6 py-12">
         <div className="max-w-sm w-full animate-card-enter">
@@ -3805,7 +3842,151 @@ function UserDetailsForm({ onComplete }: { onComplete: () => void }) {
           </p>
         </div>
       </div>
-    </>
+    </div>
+  );
+}
+
+/* ===========================
+   Rewarded Ad Modal (house ad when GAM not available)
+=========================== */
+
+const REWARDED_AD_WAIT_SEC = 5;
+
+function RewardedAdModal({
+  open,
+  onClose,
+  onComplete,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
+  const [phase, setPhase] = useState<"idle" | "loading" | "house" | "done">("idle");
+  const [countdown, setCountdown] = useState(REWARDED_AD_WAIT_SEC);
+  const countRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const completedRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) {
+      setPhase("idle");
+      setCountdown(REWARDED_AD_WAIT_SEC);
+      completedRef.current = false;
+      if (countRef.current) {
+        clearInterval(countRef.current);
+        countRef.current = null;
+      }
+      return;
+    }
+
+    const hasGAM = typeof window !== "undefined" && typeof (window as any).__showRewardedAd === "function";
+
+    if (hasGAM) {
+      setPhase("loading");
+      try {
+        (window as any).__showRewardedAd(() => {
+          onComplete();
+          onClose();
+          setPhase("done");
+        });
+      } catch {
+        setPhase("house");
+      }
+    } else {
+      setPhase("house");
+    }
+  }, [open, onComplete, onClose]);
+
+  useEffect(() => {
+    if (phase !== "house" || !open) return;
+    if (countdown <= 0) {
+      if (!completedRef.current) {
+        completedRef.current = true;
+        onComplete();
+        onClose();
+      }
+      return;
+    }
+    countRef.current = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          if (countRef.current) clearInterval(countRef.current);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => {
+      if (countRef.current) clearInterval(countRef.current);
+    };
+  }, [phase, open, countdown, onComplete, onClose]);
+
+  const handleHouseComplete = () => {
+    if (countRef.current) clearInterval(countRef.current);
+    onComplete();
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/95 animate-fade-in"
+      onClick={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (phase === "house") onClose();
+        else if (phase === "loading") onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Watch ad to earn credits"
+    >
+      <div
+        className="bg-[#0f0f0f] border border-white/10 rounded-2xl max-w-sm w-full overflow-hidden shadow-2xl text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {phase === "loading" && (
+          <div className="px-6 py-12">
+            <div className="loader-ring mx-auto mb-4" />
+            <p className="text-sm text-white/60">Loading ad...</p>
+            <button onClick={onClose} className="mt-4 text-xs text-white/40 underline">Cancel</button>
+          </div>
+        )}
+        {phase === "house" && (
+          <>
+            <div className="px-6 pt-8 pb-4">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-amber-500/20 flex items-center justify-center">
+                <span className="text-2xl">▶</span>
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-1">Thanks for supporting us</h3>
+              <p className="text-sm text-white/50 mb-6">
+                Your engagement helps us keep the app free and improve it.
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                {countdown > 0 ? (
+                  <p className="text-sm text-white/70">
+                    <span className="font-mono font-bold text-amber-400">{countdown}</span> sec — or tap below
+                  </p>
+                ) : (
+                  <p className="text-sm text-amber-400">Granting credits...</p>
+                )}
+              </div>
+            </div>
+            <div className="px-6 pb-8">
+              <button
+                onClick={handleHouseComplete}
+                className="w-full py-3.5 rounded-xl bg-amber-500/90 text-black font-medium text-sm tap-highlight hover:bg-amber-400 transition-colors"
+              >
+                Get +{REWARDED_AD_CREDITS} credits
+              </button>
+              <button onClick={onClose} className="mt-3 text-xs text-white/40 hover:text-white/60 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -3815,7 +3996,7 @@ function UserDetailsForm({ onComplete }: { onComplete: () => void }) {
 
 const WELCOME_KEY = "kyf-welcomed";
 
-function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
+function WelcomeScreen({ onContinue, exiting = false }: { onContinue: () => void; exiting?: boolean }) {
   const { signInWithGoogle, firebaseReady } = useAuth();
 
   const handleSignIn = async () => {
@@ -3830,7 +4011,7 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
   };
 
   return (
-    <>
+    <div className={`page-transition-exit ${exiting ? "page-transition-exit-active" : ""}`}>
       <AnimatedBackground />
       <div className="min-h-screen min-h-dvh flex items-center justify-center px-6 py-12">
         <div className="max-w-sm w-full text-center animate-card-enter">
@@ -3877,13 +4058,17 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
           </p>
         </div>
       </div>
-    </>
+    </div>
   );
 }
+
+const PAGE_TRANSITION_MS = 450;
 
 export default function Home() {
   const [welcomed, setWelcomed] = useState<boolean | null>(null);
   const [detailsCollected, setDetailsCollected] = useState<boolean | null>(null);
+  const [welcomeExiting, setWelcomeExiting] = useState(false);
+  const [detailsExiting, setDetailsExiting] = useState(false);
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
@@ -3900,12 +4085,28 @@ export default function Home() {
     }
   }, [user]);
 
+  const handleWelcomeContinue = () => {
+    setWelcomeExiting(true);
+    setTimeout(() => {
+      setWelcomed(true);
+      setWelcomeExiting(false);
+    }, PAGE_TRANSITION_MS);
+  };
+
+  const handleDetailsComplete = () => {
+    setDetailsExiting(true);
+    setTimeout(() => {
+      setDetailsCollected(true);
+      setDetailsExiting(false);
+    }, PAGE_TRANSITION_MS);
+  };
+
   if (welcomed === null || detailsCollected === null || authLoading) return null;
 
   if (!welcomed) {
     return (
       <ErrorBoundary>
-        <WelcomeScreen onContinue={() => setWelcomed(true)} />
+        <WelcomeScreen onContinue={handleWelcomeContinue} exiting={welcomeExiting} />
       </ErrorBoundary>
     );
   }
@@ -3913,14 +4114,18 @@ export default function Home() {
   if (!detailsCollected) {
     return (
       <ErrorBoundary>
-        <UserDetailsForm onComplete={() => setDetailsCollected(true)} />
+        <div className="page-enter">
+          <UserDetailsForm onComplete={handleDetailsComplete} exiting={detailsExiting} />
+        </div>
       </ErrorBoundary>
     );
   }
 
   return (
     <ErrorBoundary>
-      <HomeContent />
+      <div className="page-enter">
+        <HomeContent />
+      </div>
     </ErrorBoundary>
   );
 }
