@@ -28,8 +28,15 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[API Proxy] Backend error:', errorText);
+      let detail = errorText;
+      try {
+        const errJson = JSON.parse(errorText);
+        if (errJson.detail) detail = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+      } catch {
+        /* use errorText as detail */
+      }
       return NextResponse.json(
-        { error: errorText },
+        { detail, error: errorText },
         { status: response.status }
       );
     }
@@ -41,12 +48,13 @@ export async function POST(request: NextRequest) {
     console.error('[API Proxy] Error:', error.message || error);
     if (error.name === 'AbortError') {
       return NextResponse.json(
-        { error: 'Request timeout - analysis is taking too long' },
+        { detail: 'Request timeout - analysis is taking too long', error: 'Request timeout' },
         { status: 504 }
       );
     }
+    const msg = 'Failed to connect to backend. Try again in a moment.';
     return NextResponse.json(
-      { error: 'Failed to connect to backend: ' + (error.message || 'Unknown error') },
+      { detail: msg, error: error.message || 'Unknown error' },
       { status: 502 }
     );
   }
