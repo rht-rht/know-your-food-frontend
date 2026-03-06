@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/analyze/route.ts": { "maxDuration": 300 },
+    "app/api/analyze/audio/route.ts": { "maxDuration": 300 },
+    "app/api/analyze/images/route.ts": { "maxDuration": 300 }
+  }
+}
