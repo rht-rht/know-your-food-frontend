@@ -965,7 +965,7 @@ function AdBanner({ visible }: { visible: boolean }) {
    Loading Component
 =========================== */
 
-function LoadingState({ onCancel, isUrl = false }: { onCancel?: () => void; isUrl?: boolean }) {
+function LoadingState({ onCancel }: { onCancel?: () => void }) {
   const [elapsed, setElapsed] = useState(0);
   const [currentFact, setCurrentFact] = useState(0);
   const [factVisible, setFactVisible] = useState(true);
@@ -980,14 +980,7 @@ function LoadingState({ onCancel, isUrl = false }: { onCancel?: () => void; isUr
     { icon: "📝", label: "Preparing your report", threshold: 75 },
   ];
 
-  const urlStages = [
-    { icon: "🔍", label: "Extracting health claims", threshold: 0 },
-    { icon: "📚", label: "Searching scientific databases", threshold: 25 },
-    { icon: "⚖️", label: "Analyzing evidence", threshold: 55 },
-    { icon: "📝", label: "Preparing your report", threshold: 85 },
-  ];
-
-  const activeStages = isUrl ? urlStages : stages;
+  const activeStages = stages;
 
   const facts = [
     "Your body replaces its entire skeleton roughly every 10 years.",
@@ -1038,7 +1031,7 @@ function LoadingState({ onCancel, isUrl = false }: { onCancel?: () => void; isUr
 
   const progress = Math.min(
     ((elapsed - stage.threshold) / 
-    ((activeStages[currentStageIdx + 1]?.threshold || (isUrl ? 140 : 90)) - stage.threshold)) * 100,
+    ((activeStages[currentStageIdx + 1]?.threshold || 90) - stage.threshold)) * 100,
     100
   );
 
@@ -1167,7 +1160,7 @@ function NotRelevantCard({ reason, onTryAgain }: { reason?: string; onTryAgain?:
   const examples = [
     { icon: "💬", text: "\"Eating bananas at night causes weight gain\"" },
     { icon: "💪", text: "\"Morning workouts burn more fat than evening\"" },
-    { icon: "🔗", text: "Paste a health/fitness reel or shorts link" },
+    { icon: "🎙️", text: "Record your voice with a health or fitness claim" },
     { icon: "📷", text: "Upload a food label or health product image" },
   ];
 
@@ -1224,7 +1217,7 @@ function NotRelevantCard({ reason, onTryAgain }: { reason?: string; onTryAgain?:
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-400 mt-0.5">•</span>
-                <span>Paste links to reels/shorts about health, diet, or exercise</span>
+                <span>Record audio or type claims about health, diet, or exercise</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-400 mt-0.5">•</span>
@@ -2431,7 +2424,7 @@ function UserMenu({ analysisCount = 0, onWatchAd }: { analysisCount?: number; on
                   <h4 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider mb-3">How to use</h4>
                   <div className="space-y-3">
                     <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0 text-sm">💬</div><div><p className="text-sm font-medium text-white/90">Type a claim</p><p className="text-xs text-white/50">E.g. &quot;Eating bananas at night causes weight gain&quot;</p></div></div>
-                    <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-pink-500/20 flex items-center justify-center flex-shrink-0 text-sm">🔗</div><div><p className="text-sm font-medium text-white/90">Paste a reel or shorts URL</p><p className="text-xs text-white/50">Instagram reels, YouTube shorts with health claims</p></div></div>
+                    <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-pink-500/20 flex items-center justify-center flex-shrink-0 text-sm">🎙️</div><div><p className="text-sm font-medium text-white/90">Record a claim with your voice</p><p className="text-xs text-white/50">Speak any health or fitness claim to analyze</p></div></div>
                     <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0 text-sm">🎤</div><div><p className="text-sm font-medium text-white/90">Record your voice</p><p className="text-xs text-white/50">Speak the claim and it auto-stops after 3s of silence</p></div></div>
                     <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0 text-sm">📷</div><div><p className="text-sm font-medium text-white/90">Upload images</p><p className="text-xs text-white/50">Food labels, product claims — up to 5 images at once</p></div></div>
                     <div className="flex gap-3"><div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0 text-sm">📦</div><div><p className="text-sm font-medium text-white/90">Scan a barcode</p><p className="text-xs text-white/50">Scan any food product barcode for nutritional analysis (free)</p></div></div>
@@ -2646,13 +2639,6 @@ function UserMenu({ analysisCount = 0, onWatchAd }: { analysisCount?: number; on
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-pink-500/20 flex items-center justify-center flex-shrink-0 text-sm">🔗</div>
-                    <div>
-                      <p className="text-sm font-medium text-white/90">Paste a reel or shorts URL</p>
-                      <p className="text-xs text-white/50">Instagram reels, YouTube shorts with health claims</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
                     <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0 text-sm">🎤</div>
                     <div>
                       <p className="text-sm font-medium text-white/90">Record your voice</p>
@@ -2679,7 +2665,7 @@ function UserMenu({ analysisCount = 0, onWatchAd }: { analysisCount?: number; on
               <div className="border-t border-white/[0.1] pt-4">
                 <h4 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-2">Credits</h4>
                 <p className="text-sm text-white/70 leading-relaxed mb-2">
-                  Each analysis uses credits. Text costs {CREDIT_COST_TEXT} credit, media (URLs, images, audio) costs {CREDIT_COST_MEDIA} credits, and barcode scans are free. You can earn credits by:
+                  Each analysis uses credits. Text costs {CREDIT_COST_TEXT} credit, media (images, audio) costs {CREDIT_COST_MEDIA} credits, and barcode scans are free. You can earn credits by:
                 </p>
                 <ul className="text-sm text-white/60 space-y-1 ml-1">
                   <li className="flex items-center gap-2"><span className="text-amber-400">▶</span> Watching a short ad (+{REWARDED_AD_CREDITS} cr)</li>
@@ -2772,7 +2758,7 @@ function HomeContent() {
   const [showHistory, setShowHistory] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [currentInputType, setCurrentInputType] = useState<"text" | "audio" | "image" | "barcode">("text");
-  const [isUrlInput, setIsUrlInput] = useState(false);
+  
   const [nutriScore, setNutriScore] = useState<string | null>(null);
   const [productDetails, setProductDetails] = useState<{
     name: string;
@@ -2862,7 +2848,7 @@ function HomeContent() {
         setHistory((prev) => [historyItem, ...prev].slice(0, MAX_HISTORY_ITEMS));
 
         if (user) {
-          const inputType = isUrlInput ? "url" : currentInputType === "audio" ? "audio" : currentInputType === "image" ? "image" : "text";
+          const inputType = currentInputType === "audio" ? "audio" : currentInputType === "image" ? "image" : "text";
           saveAnalysisToFirestore(
             user.uid,
             inputText.slice(0, 500) || "Audio/Image analysis",
@@ -2875,7 +2861,7 @@ function HomeContent() {
     } catch (err) {
       console.warn("Error saving to history:", err);
     }
-  }, [result, currentInputType, inputText, user, isUrlInput]);
+  }, [result, currentInputType, inputText, user]);
 
   const handleHistorySelect = (item: HistoryItem) => {
     setResult(item.result);
@@ -3036,13 +3022,11 @@ function HomeContent() {
     }
 
     if (!inputText.trim()) {
-      setError("Please enter a claim or paste the reel or YouTube Shorts link");
+      setError("Please enter a health, nutrition, or fitness claim");
       return;
     }
 
-    const trimmed = inputText.trim();
-    const looksLikeUrl = /^https?:\/\//i.test(trimmed) || /\.(com|net|org|io)\//i.test(trimmed);
-    const cost = looksLikeUrl ? CREDIT_COST_MEDIA : CREDIT_COST_TEXT;
+    const cost = CREDIT_COST_TEXT;
 
     const canProceed = await hasEnoughCredits(cost);
     if (!canProceed) return;
@@ -3051,7 +3035,6 @@ function HomeContent() {
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
-    setIsUrlInput(looksLikeUrl);
     setCurrentInputType("text");
     setResult(null);
     setLoading(true);
@@ -3078,7 +3061,6 @@ function HomeContent() {
     }
 
     setLoading(false);
-    setIsUrlInput(false);
   };
 
   // Auto-trigger analysis for shared URLs from PWA Share Target
@@ -3496,7 +3478,7 @@ function HomeContent() {
           <div className="glass-vibrant rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 animate-card-enter" style={{ animationDelay: "0.1s" }}>
             <input
               type="text"
-              placeholder={stagedImages.length > 0 ? "Add a concern or question about these images (optional)..." : "Type a claim or paste Reel / YT Shorts URL..."}
+              placeholder={stagedImages.length > 0 ? "Add a concern or question about these images (optional)..." : "Type a health, nutrition, or fitness claim..."}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -3630,7 +3612,7 @@ function HomeContent() {
           )}
 
           {/* Loading */}
-          {loading && <LoadingState onCancel={cancelAnalysis} isUrl={isUrlInput} />}
+          {loading && <LoadingState onCancel={cancelAnalysis} />}
 
           {/* Not Relevant Result */}
           {result && result.is_relevant === false && (
